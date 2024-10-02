@@ -1,3 +1,6 @@
+# State and movement model structures for 2D-CRW 
+# (e.g., as implemented by glatos::crw())
+
 # Custom state (X, Y, D)
 struct StateXYD <: Patter.State
     # Map value

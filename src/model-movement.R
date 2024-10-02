@@ -1,3 +1,4 @@
+#' states_init() method for StateXYD
 states_init.StateXYD <- function(.state, .coords) {
   z <- map_value <- angle <- NULL
   # Add angle (rad)
@@ -5,6 +6,8 @@ states_init.StateXYD <- function(.state, .coords) {
   .coords
 }
 
+#' Movement model wrapper
+#' Assemble a movement model string for ModelMoveXYD given a step length and turning angle
 move_xyd <- function(length, theta) {
   length <- as.numeric(length)
   theta  <- as.numeric(theta)
