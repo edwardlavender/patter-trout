@@ -16,7 +16,7 @@ library(sf)
 # remotes::install_github('ocean-tracking-network/glatos', build_vignettes = TRUE)
 library(glatos)
 # devtools::install_github("rossdwyer/VTrack")
-library(VTrack)
+# library(VTrack)
 # remotes::install_github("YuriNiella/RSP") 
 library(raster)
 library(move)
@@ -108,6 +108,7 @@ recs_short <- recs %>%
   group_by(StationName,regions) %>% 
   reframe(deploy_lon = mean(deploy_long), deploy_lat = mean(deploy_lat))
 
+saveRDS(recs_short, "./data/moorings.rds")
 
 # convert to sp object
 recs_sf <- st_as_sf(x = recs_short, coords = c('deploy_lon', 'deploy_lat'), crs = 4326)
