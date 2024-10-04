@@ -39,7 +39,6 @@ metadata   <- readRDS("data/simulations_metadata.rds")
 #### Julia connection
 julia_connect()
 set_seed()
-julia_command('include("Julia/src/model-movement.jl");')
 julia_command('include("Julia/src/model-observation.jl")')
 
 
@@ -47,20 +46,33 @@ julia_command('include("Julia/src/model-observation.jl")')
 ###########################
 #### Prepare data (generic)
 
+#### Define study start time
+start <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
+
 #### Define study area
+epsg_utm         <- "EPSG:3175"
 champlain$region <- champlain$GNIS_NAME
 champlain$land   <- as.numeric(1)
-regions <- as_SpatRaster(champlain, .simplify = 0.001, .utm = "EPSG:32618",
+regions <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
                          .field = "region", .res = 10, .plot = TRUE)
-maps    <- as_SpatRaster(champlain, .simplify = 0.001, .utm = "EPSG:32618",
+maps    <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
                          .field = "land", .res = 10, .plot = TRUE)
 map <- maps$SpatRaster
 ydist <- terra::ymax(map) - terra::ymin(map)
 set_map(map)
 
-#### Define simulated paths 
+#### Define simulated paths (~40 s)
 file_paths <- "data/patter/paths.qs"
 if (!file.exists(file_paths)) {
+  
+  tic()
+  
+  # complete_simulated_transmissions_regions.rds contains the full trajectory
+  # > I.e., the position every 127 s
+  # simulated_positions_July2023.rds contains the simulated positions only
+  # > These positions can be more sparsely spaced depending on velocity7
+  # > glatos imposes a timeline afterwards! 
+
   # paths      <- readRDS("data/simulated_positions_July2023.rds")
   paths      <- readRDS("data/complete_simulated_transmissions_regions.rds")
   # Define path coordinates (UTM)
@@ -74,12 +86,16 @@ if (!file.exists(file_paths)) {
   paths <- 
     paths |> 
     as.data.table() |>
-    mutate(x = sxy[, 1], y = sxy[, 2]) |>
-    select(sim_id = virt_fish, x, y, region = regions) |> 
-    group_by(sim_id) |> 
+    mutate(timestamp = start + time, 
+           x = sxy[, 1], y = sxy[, 2]) |>
+    group_by(virt_fish) |> 
     mutate(timestep = row_number()) |> 
+    select(sim_id = virt_fish, timestep, timestamp, x, y, region = regions) |> 
     as.data.table()
   qs::qsave(paths, file_paths)
+  
+  toc()
+  
 } else {
   paths <- qs::qread(file_paths)
 }
@@ -88,8 +104,8 @@ if (!file.exists(file_paths)) {
 # Define receiver coordinates (UTM)
 rxy <- 
   cbind(moorings$deploy_lon, moorings$deploy_lat) |> 
-  terra::vect(crs = "WGS84") |> 
-  terra::project("EPSG:32618") |>
+  terra::vect(crs = terra::crs(champlain)) |> 
+  terra::project(epsg_utm) |>
   terra::crds()
 points(rxy[, 1], rxy[, 2], col = "red")
 stopifnot(all(!is.na(terra::extract(map, rxy)$map_value)))
@@ -164,45 +180,69 @@ stopifnot(nrow(meta) == 1L)
 # Simulated tracks comprised 5000 steps
 # Each step comprised 500 m
 # But velocity set to different values in transmit_along_path()
-# I.e., step lengths differed in duration
-# Transmissions were generated along the paths every 120 s
+# I.e., For each individual, the duration of a step length is different 
+# Transmissions were generated along the paths every 120 + 7 s
 
 # Calculate the step duration
-speed    <- meta$velocity      # speed @ each time step (m/s)
-distance <- 500                # distance moved at each time step (m)
-time     <- distance / speed   # duration of each time step (s)
+trms_time    <- 120 # + 7                    # transmission time (every 127 s)
+mvt_speed    <- meta$velocity              # speed @ each _movement_ time step (m/s)
+mvt_distance <- 500                        # distance moved at each _movement_ time step (m)
+mvt_time     <- mvt_distance / mvt_speed   # duration of each _movement_ time step (s)
 
 # Define simulation start and end times
-start    <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
-end      <- max(seq(start, length.out = 5000, by = paste(time, "secs")))
+end      <- max(seq(start, length.out = 5000, by = paste(mvt_time, "secs")))
 
 # Define timeline 
-# * The timeline is based on a transmission interval of 2 mins
-# * The step length (m) in 2 mins given {speed} is speed * 120
-timeline <- seq.POSIXt(start, end, by = "2 mins")
+# * The timeline is based on a transmission interval of ~2 mins
+# * (The step length (m) in ~2 mins given {mvt_speed} is {mvt_speed} * {trms_time})
+# * (The angle is simulated every {mvt_time} s)
+timeline <- seq.POSIXt(start, end, by = paste(trms_time, "secs"))
 
 # Validate that the timeline spans the detection time series for the ID
 stopifnot(interval(min(dets$timestamp), max(dets$timestamp)) %within% interval(min(timeline), max(timeline)))
+
+#### Movement & timeline validation
+# Check simulated step lengths and turning angles at 127 s resolution 
+# * The path was simulated with 5000 steps, each of {mvt_time} secs
+# * complete_simulated_transmissions_regions.rds contains the 'full' path @ resolution of 127 s
+# * Step lengths should match {mvt_speed} (m/s) * {trms_time} (s)
+mvt_len <- mvt_speed * trms_time
+if (FALSE) {
+  movements <- 
+    path |> 
+    lazy_dt() |> 
+    select(sim_id, date = timestamp, x, y) |> 
+    as.data.frame() |> 
+    bayesmove::prep_data(coord.names = c("x", "y"), id = "sim_id")
+  unique(diff(movements$date)) # time stamps evenly spaced
+  unique(movements$step)       # step lengths not exactly equal 
+  hist(movements$step)         # but most step lengths are correct
+  unique(movements$angle)      # angles (radians)
+}
+# Check distance of individual to receiver @ moment of detection
+# TO DO
 
 #### Define movement model
 # Paths were simulated via glatos::crw_in_polygon() which calls glatos::crw()
 # * https://github.com/ocean-tracking-network/glatos/blob/main/R/sim-crw_in_polygon.r
 # * https://github.com/ocean-tracking-network/glatos/blob/main/R/simutil-crw.r
-# There were 500 steps
-# Step length in 2 mins given {speed} is speed (m/s) * 120 (s)
+# Step length in {trms_time} given {mvt_speed} is {mvt_speed} (m/s) * {trms_time} (s)
 # heading_{t = 1} = Uniform(0, 360) 
-# heading_{t > 1} = Normal(0, meta$theta) + cumsum(heading{t = 1, ..., t})
-# But internally glatos enlarges the SD if the simulation steps outside the polygon! 
-state             <- "StateXYD"
-model_move_length <- speed * 120
-model_move        <- move_xyd(length = model_move_length, theta = meta$theta)
+# heading_{t > 1} = Normal(0, meta$theta) + cumsum(heading{t = 1, ..., t}) 
+# Angles updated every {mvt_time} (s) / {trms_time} (s) time steps
+# (Internally glatos enlarges the SD if the simulation steps outside the polygon!)
+state              <- "StateXYD"
+model_move         <- move_xyd(length = mvt_len, theta = meta$theta)
+update_angle_every <- round(mvt_time / trms_time)
+julia_assign("update_angle_every", update_angle_every)
+julia_command('include("Julia/src/model-movement.jl");')
 
 #### Define observation model
 model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
 acoustics   <- assemble_acoustics(.timeline = timeline, .acoustics = dets, .moorings = moorings)
 containers  <- assemble_acoustics_containers(.acoustics = acoustics, 
                                             .direction = "forward", 
-                                            .mobility = distance, 
+                                            .mobility = mvt_len, 
                                             .threshold = ydist)
 yobs        <- list(ModelObsAcousticLogisTrunc = acoustics, 
                     ModelObsAcousticContainer = containers)
@@ -213,15 +253,16 @@ args <- list(.map = map,
              .timeline = timeline, 
              .state = state, 
              .xinit = NULL, 
-             .xinit_pars = list(mobility = model_move_length),
+             .xinit_pars = list(mobility = mvt_len),
              .yobs = yobs, 
              .model_obs = model_obs, 
              .model_move = model_move, 
-             .n_particle = 25000L, 
+             .n_particle = 10000L, 
              .direction = "forward"
              )
 # Run forward filter 
 # * NB: Setting observations is slow (1 min)
+# > Weights from filter (1 -> 208292) are zero at time 62367
 fwd <- do.call(pf_filter, args, quote = TRUE)
 # Backward filter
 # * Update containers & yobs for .direction = "backward", then run filter
