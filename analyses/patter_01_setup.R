@@ -158,12 +158,12 @@ stopifnot(all(!is.na(detections$receiver_id)))
 metadata <- as.data.table(metadata)
 
 #### Save datasets
-terra::writeRaster(map, "./data/patter/input/map.tif")
-qs::qsave(map_len, "./data/patter/input/map_len.qs")
-qs::qsave(start, "./data/patter/input/start.qs")
-qs::qsave(moorings, "./data/patter/input/moorings.qs")
-qs::qsave(detections, "./data/patter/input/detections.qs")
-qs::qsave(metadata, "./data/patter/input/metadata.qs")
+terra::writeRaster(map, here_input("map.tif"))
+qs::qsave(map_len, here_input("map_len.qs"))
+qs::qsave(start, here_input("start.qs"))
+qs::qsave(moorings, here_input("moorings.qs"))
+qs::qsave(detections, here_input("detections.qs"))
+qs::qsave(metadata, here_input("metadata.qs"))
 
 
 #### End of code. 
