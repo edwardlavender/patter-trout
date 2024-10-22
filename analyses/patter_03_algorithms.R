@@ -30,7 +30,9 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-#  map <- terra::rast(here_input("map.tif"))
+if (!os_linux()) {
+  map <- terra::rast(here_input("map.tif"))
+}
 map_len     <- qs::qread(here_input("map_len.qs"))
 timelines   <- qs::qread(here_input("timelines.qs"))
 paths       <- qs::qread(here_input("paths.qs"))
@@ -70,7 +72,7 @@ asd      <- parameters$model_move$angle$sd
 state      <- "StateXY"
 model_move <- move_xy(mobility = mobility, 
                       dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
-                      dbn_angle = glue("Normal({amean}, {asd})"))
+                      dbn_angle = glue("Uniform(-pi, pi)"))
 
 #### Define observation models
 # Assemble acoustics (0, 1)
@@ -100,13 +102,11 @@ args <- list(.timeline = timeline,
              .xinit = NULL, 
              .yobs = yobs_fwd,
              .model_move = model_move, 
-             .n_particle = 1e4L, 
+             .n_particle = 2e4L, 
              .direction = "forward"
              )
 
 #### Run forward filter 
-# * NB: Setting observations is slow (1 min)
-# > Weights from filter (1 -> 208292) are zero at time 62367
 fwd <- do.call(pf_filter, args, quote = TRUE)
 
 #### Run backward filter
@@ -115,51 +115,8 @@ args$.direction <- "backward"
 do.call(pf_filter, args, quote = TRUE)
 
 #### Run smoother 
-out_smo <- pf_smoother_two_filter()
-
-
-###########################
-###########################
-#### Quick residency analysis
-
-#### True residency in each region
-path_res <- 
-  path |> 
-  group_by(region) |> 
-  summarise(n = n()) |> 
-  mutate(residency = (n / sum(n)) * 100, 
-         estimate = "path", 
-         sim_id = id) |> 
-  as.data.table()
-
-#### Particle residency estimates
-part_res <- 
-  out_smo |> 
-  mutate(region = terra::extract(map, cbind(x, y))) |>
-  group_by(region) |> 
-  mutate(residency = (n / sum(n)) * 100, 
-         estimate = "smoother", 
-         sim_id = id) |> 
-  as.data.table()
-
-#### Collect data
-res <- rbind(path_res, part_res)
-qs::qsave(res, "data/patter/output/residency/qresidency/", paste0(id, ".qs"))
-
-
-###########################
-###########################
-#### Synthesis
-
-# Read residency data for each individual 
-residency <- 
-  lapply(unique(paths$sim_id), function(id) {
-  qs::qread("data/patter/qresidency.qs")
-}) |> rbindlist()
-
-# Visualise residency ~ individual, coloured by truth/algorithm
-# 
-# > TO DO
+smo <- pf_smoother_two_filter()
+qs::qsave(smo, here_output("particles", paste0(id, ".qs")))
 
 
 #### End of code. 
