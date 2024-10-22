@@ -1,0 +1,166 @@
+###########################
+###########################
+#### patter-exploration
+
+#### Aims
+# 1) Examine simulated datasets for patter
+
+#### Prerequisites
+# 1) patter-setup.R
+
+
+###########################
+###########################
+#### Setup 
+
+#### Wipe workspace 
+rm(list = ls())
+# try(pacman::p_unload("all"), silent = TRUE)
+dv::clear()
+
+#### Essential packages
+library(data.table)
+library(dtplyr)
+library(dplyr, warn.conflicts = FALSE)
+library(JuliaCall)
+library(lubridate)
+library(patter)
+library(tictoc)
+dv::src()
+
+#### Load data 
+#  map <- terra::rast(here_input("map.tif"))
+map_len     <- qs::qread(here_input("map_len.qs"))
+start       <- qs::qread(here_input("start.qs"))
+paths       <- qs::qread(here_input("paths.qs"))
+moorings    <- qs::qread(here_input("moorings.qs"))
+detections  <- qs::qread(here_input("detections.qs"))
+metadata    <- qs::qread(here_input("metadata.qs"))
+
+
+###########################
+###########################
+#### Examine movements
+
+#### Movement simulation
+# Paths were simulated via glatos::crw_in_polygon() which calls glatos::crw()
+# * https://github.com/ocean-tracking-network/glatos/blob/main/R/sim-crw_in_polygon.r
+# * https://github.com/ocean-tracking-network/glatos/blob/main/R/simutil-crw.r
+# Step length in {trms_time} given {mvt_speed} is {mvt_speed} (m/s) * {trms_time} (s)
+# heading_{t = 1} = Uniform(0, 360) 
+# heading_{t > 1} = Normal(0, meta$theta) + cumsum(heading{t = 1, ..., t}) 
+# Angles updated every {mvt_time} (s) / {trms_time} (s) time steps
+# (Internally glatos enlarges the SD if the simulation steps outside the polygon!)
+
+#### Compute path metrics (~1.25 mins with 12 cl)
+# `complete_simulated_transmissions_regions.rds` contains the 'full' path @ resolution of 127 s
+# We can use this to conveniently check the distribution of step lengths & turning angles
+# > Each simulated path was 5000 steps
+# > Each step was 500 m
+# > During a step, velocity was set to different values
+# > Hence, steps lasted different durations (500 / velocity)
+
+paths_metrics <- 
+  cl_lapply(unique(paths$sim_id), .cl = 12L, .fun = function(id) {
+    
+    path_metrics <- 
+      paths |> 
+      lazy_dt() |> 
+      filter(sim_id == id) |> 
+      select(sim_id, date = timestamp, x, y) |> 
+      as.data.frame() |> 
+      bayesmove::prep_data(coord.names = c("x", "y"), id = "sim_id") |> 
+      select(sim_id, timestamp = date, x, y, step, angle, dt) |> 
+      as.data.table()
+    
+    if (FALSE) {
+      unique(diff(path_metrics$date)) # time stamps evenly spaced
+      unique(path_metrics$step)       # step lengths not exactly equal 
+      hist(path_metrics$step)         # but most step lengths are correct
+      unique(path_metrics$angle)      # angles (radians)
+    }
+
+    path_metrics
+    
+  }) |> rbindlist()
+
+#### Examine step lengths (~2 mins)
+# This is a quick way of generating an approximately suitable model across all individuals
+tic()
+steps <- paths_metrics$step[!is.na(paths_metrics$step)]
+max(steps)
+# 114.355 
+spar       <- MASS::fitdistr(steps, "gamma")
+step_shape <- spar$estimate["shape"] |> as.numeric()
+step_scale <- 1 / spar$estimate["rate"] |> as.numeric()
+mobility   <- 115
+# shape           rate    
+# 1.494954e+00   5.714505e-02 
+# (6.233589e-04) (2.822856e-05)
+hist(steps, prob = TRUE)
+curve(dgamma(x, shape = step_shape, scale = step_scale), 
+      lwd = 3, add = TRUE)
+toc()
+
+#### Examine turning angles
+# This is a quick way of generating an approximately suitable model across all individuals
+angles     <- paths_metrics$angle[!is.na(paths_metrics$angle)]
+apar       <- MASS::fitdistr(angles, "normal")
+angle_mean <- apar$estimate["mean"] |> as.numeric()
+angle_sd   <- apar$estimate["sd"] |> as.numeric()
+# mean             sd      
+# -4.278476e-05    1.362498e-01 
+# ( 4.416044e-05) ( 3.122614e-05)
+hist(angles, prob = TRUE)
+curve(dnorm(x, mean = angle_mean, sd = angle_sd), 
+      lwd = 3, add = TRUE)
+
+
+###########################
+###########################
+#### Examine observations
+
+#### Examine detection range (~2 s)
+# > Compute the detection distances (ddists) between individuals & receivers at moment of detection
+
+ddists <- 
+  cl_lapply(split(paths, paths$sim_id), function(path) {
+  
+  # path <- split(paths, paths$sim_id)[[1]]
+    
+  # Combine detections with receiver coordinates 
+  ddist <- merge(detections, moorings, by = "receiver_id")
+  
+  # At the moment of detection, add individual location
+  ddist <- merge(ddist, path, by = "timestamp")
+  
+  # Compute distances between individual and receiver
+  ddist |>
+    select("timestamp", "receiver_x", "receiver_y", "x", "y") |> 
+    mutate(dist = terra::distance(cbind(ddist$receiver_x, ddist$receiver_y),
+                                  cbind(ddist$x, ddist$y), pairwise = TRUE, lonlat = FALSE)) |>
+    as.data.table()
+  
+}) |> rbindlist()
+
+# The maximum detection range in the simulated study system:
+max(ddists$dist)
+# 3236.828
+receiver_gamma <- 3240
+
+
+###########################
+###########################
+#### Save outputs
+
+parameters <- 
+  list(model_move = list(step = list(shape = step_shape, scale = step_scale), 
+                         angle = list(mean = angle_mean, sd = angle_sd)), 
+       model_obs = list(receiver_gamma = receiver_gamma))
+
+qs::qsave(parameters, here_input("parameters.qs"))
+
+
+#### End of code. 
+###########################
+###########################
