@@ -1,11 +1,4 @@
-# (TEMPORARY) as_SpatRaster() function
-
-# TO DO
-# * Rename to assemble_maps()
-# * If SpatVector supplied, implement as shown
-# * If SpatRaster supplied, create SpatVector (?)
-# * Add to patter
-
+#' Convert shapefile to SpatRaster
 as_SpatRaster <- function(.x, .simplify = NULL, .utm = NULL,
                           .res, .field, .touches = TRUE, 
                           .plot = FALSE, ...) {
