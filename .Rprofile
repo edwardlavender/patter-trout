@@ -1,7 +1,6 @@
 source("renv/activate.R")
 
-repos <- c(CRAN = "https://cloud.r-project.org")
-options(repos = repos)
+options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 if (!requireNamespace("here", quietly = TRUE)) {
   install.packages("here")
