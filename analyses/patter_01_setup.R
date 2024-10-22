@@ -23,23 +23,20 @@ library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
 library(tictoc)
+dv::src()
 
 #### Load data 
 champlain  <- terra::vect("data/ChamplainRegions.shp")
 moorings   <- readRDS("data/moorings.rds")
 detections <- readRDS("data/simulated_detections.rds")
 metadata   <- readRDS("data/simulations_metadata.rds")
-dv::src()
 
 
 ###########################
 ###########################
-#### Prepare datasets
+#### Study area (~2 s)
 
-#### Define study start time
-start <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
-
-#### Define study area (~2 s)
+#### Map 
 tic()
 epsg_utm         <- "EPSG:3175"
 champlain$region <- champlain$GNIS_NAME
@@ -52,16 +49,20 @@ map     <- maps$SpatRaster
 map_len <- terra::ymax(map) - terra::ymin(map)
 toc()
 
-#### Define validity map
+#### Validity map
 # TO DO
 
-#### Define simulated paths (~40 s)
+
+###########################
+###########################
+#### Simulated paths (~40 s)
+
 file_paths <- "data/patter/input/paths.qs"
 if (!file.exists(file_paths)) {
   
   tic()
   
-  # Read paths 
+  #### Read paths 
   # * `complete_simulated_transmissions_regions.rds` contains the full trajectory
   # > I.e., the position every 127 s
   # * `simulated_positions_July2023.rds` contains the simulated positions only
@@ -70,7 +71,7 @@ if (!file.exists(file_paths)) {
   # paths <- readRDS("data/simulated_positions_July2023.rds")
   paths   <- readRDS("data/complete_simulated_transmissions_regions.rds")
   
-  # Define path coordinates (UTM)
+  #### Define path coordinates (UTM)
   sxy <- 
     paths$geometry |>
     sf::st_coordinates() |>
@@ -78,7 +79,7 @@ if (!file.exists(file_paths)) {
     terra::project(terra::crs(map)) |> 
     terra::crds()
   
-  # Define paths data.table
+  #### Define paths data.table
   paths <- 
     paths |> 
     as.data.table() |>
@@ -89,13 +90,18 @@ if (!file.exists(file_paths)) {
     select(sim_id = virt_fish, timestep, timestamp, x, y, region = regions) |> 
     as.data.table()
   
-  # Save 
+  #### Save 
   qs::qsave(paths, file_paths)
   toc()
   
 } else {
   paths <- qs::qread(file_paths)
 }
+
+
+###########################
+###########################
+#### Observations
 
 #### Define detection data (detections & receiver coordinates)
 # Define receiver coordinates (UTM)
@@ -106,7 +112,8 @@ rxy <-
   terra::crds()
 points(rxy[, 1], rxy[, 2], col = "red")
 stopifnot(all(!is.na(terra::extract(map, rxy)$map_value)))
-# Define moorings data.table
+
+#### Define moorings data.table
 range(detections$detection_timestamp_utc)
 moorings <- 
   moorings |>
@@ -129,17 +136,23 @@ moorings <-
          receiver_alpha, receiver_beta, receiver_gamma,
          receiver_lon, receiver_lat, receiver_key) |> 
   as.data.table()
-# Define detections 
+
+#### Update detections 
 detections <- 
   detections |> 
   select(sim_id, 
          timestamp = "detection_timestamp_utc",
          receiver_lon = deploy_lon, 
          receiver_lat = deploy_lat) |> 
+  # Define sim_id as integer
+  mutate(sim_id = stringr::str_replace(sim_id, "sim_", ""), 
+         sim_id = as.integer(sim_id)) |>
   mutate(receiver_key = paste(receiver_lon, receiver_lat)) |> 
   mutate(receiver_id = moorings$receiver_id[match(receiver_key, moorings$receiver_key)]) |>
+  select(sim_id, timestamp, receiver_id) |> 
   as.data.table()
-# Clean up 
+
+#### Clean up moorings
 moorings <- 
   moorings |> 
   select("receiver_id", 
@@ -147,20 +160,63 @@ moorings <-
          "receiver_x", "receiver_y", 
          "receiver_alpha", "receiver_beta", "receiver_gamma") |> 
   as.data.table()
-detections <- 
-  detections |> 
-  select(sim_id, timestamp, receiver_id) |> 
-  as.data.table()
-# Checks
+
+#### Checks
 stopifnot(all(!is.na(detections$receiver_id)))
 
-#### Define metadata
-metadata <- as.data.table(metadata)
+###########################
+###########################
+#### Metadata
 
+#### Define metadata
+metadata <-
+  metadata |> 
+  # Define sim_id as integer
+  mutate(sim_id = stringr::str_replace(sim_id, "sim_", ""), 
+         sim_id = as.integer(sim_id)) |>
+  as.data.table()
+
+#### Collect individual IDs (1:100)
+ids <- sort(unique(metadata$sim_id))
+
+
+###########################
+###########################
+#### Timeline 
+
+#### Simulation methods
+# The timeline is individual specific
+# Start time: "2022-01-01 00:00:00"
+# Simulated tracks comprised 5000 steps
+# Each step comprised 500 m
+# But velocity was set to different values in glatos::transmit_along_path()
+# I.e., For each individual, the duration of a step length is different 
+# Transmissions were generated along the paths every 120 + 7 s
+# To assemble the timeline, we can use the simulated paths dataset
+
+#### Define study start time
+start <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
+
+#### Define timelines (a list, with one element for each individual)
+timelines <- 
+  lapply(ids, function(id) {
+    # print(id)
+    path <- paths[sim_id == id, ]
+    timeline <- assemble_timeline(list(data.table(timestamp = start), path),
+                                  .step = "2 mins", 
+                                  .trim = FALSE)
+    timeline
+}) 
+names(timelines) <- ids
+
+
+###########################
+###########################
 #### Save datasets
-terra::writeRaster(map, here_input("map.tif"))
+
+terra::writeRaster(map, here_input("map.tif"), overwrite = TRUE)
 qs::qsave(map_len, here_input("map_len.qs"))
-qs::qsave(start, here_input("start.qs"))
+qs::qsave(timelines, here_input("timelines.qs"))
 qs::qsave(moorings, here_input("moorings.qs"))
 qs::qsave(detections, here_input("detections.qs"))
 qs::qsave(metadata, here_input("metadata.qs"))
