@@ -235,6 +235,7 @@ qs::qsave(metadata, here_input("metadata.qs"))
 #### Check sizes 
 file.size(here_input("map.tif")) / 1e6 # MB
 
+
 #### End of code. 
 ###########################
 ###########################
