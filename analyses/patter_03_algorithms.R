@@ -22,6 +22,7 @@ dv::clear()
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(glue)
 library(JuliaCall)
 library(lubridate)
 library(patter)
@@ -31,11 +32,12 @@ dv::src()
 #### Load data 
 #  map <- terra::rast(here_input("map.tif"))
 map_len     <- qs::qread(here_input("map_len.qs"))
-start       <- qs::qread(here_input("start.qs"))
+timelines   <- qs::qread(here_input("timelines.qs"))
 paths       <- qs::qread(here_input("paths.qs"))
+metadata    <- qs::qread(here_input("metadata.qs"))
 moorings    <- qs::qread(here_input("moorings.qs"))
 detections  <- qs::qread(here_input("detections.qs"))
-metadata    <- qs::qread(here_input("metadata.qs"))
+parameters  <- qs::qread(here_input("parameters.qs"))
 
 #### Julia setup 
 julia_connect()
@@ -47,112 +49,45 @@ set_map("./data/patter/input/map.tif")
 ###########################
 #### Prepare algorithms
 
-
-###########################
-#### Individual datasets
-
 #### Define individual & associated datasets
 id   <- 1
-sid  <- paste0("sim_", id)
 path <- paths[sim_id == id, ]
-dets <- detections[sim_id == sid, ]
-meta <- metadata[sim_id == sid, ]
+dets <- detections[sim_id == id, ]
+meta <- metadata[sim_id == id, ]
 stopifnot(nrow(meta) == 1L)
 
+#### Define timeline (individual-specific)
+timeline <- timelines[[id]]
 
-###########################
-#### Define study timeline
+#### Define movement model 
+# Parameters
+mobility <- parameters$model_move$mobility
+sshape   <- parameters$model_move$step$shape
+sscale   <- parameters$model_move$step$scale
+amean    <- parameters$model_move$angle$mean
+asd      <- parameters$model_move$angle$sd
+# Model
+state      <- "StateXY"
+model_move <- move_xy(mobility = mobility, 
+                      dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
+                      dbn_angle = glue("Normal({amean}, {asd})"))
 
-# The timeline is individual specific
-# Start time: "2022-01-01 00:00:00"
-# Simulated tracks comprised 5000 steps
-# Each step comprised 500 m
-# But velocity was set to different values in glatos::transmit_along_path()
-# I.e., For each individual, the duration of a step length is different 
-# Transmissions were generated along the paths every 120 + 7 s
-
-# Calculate the step duration
-trms_time    <- 120 # + 7                  # transmission time (every 127 s)
-mvt_speed    <- meta$velocity              # speed @ each _movement_ time step (m/s)
-mvt_distance <- 500                        # distance moved at each _movement_ time step (m)
-mvt_time     <- mvt_distance / mvt_speed   # duration of each _movement_ time step (s)
-
-# Define simulation start and end times
-end      <- max(seq(start, length.out = 5000, by = paste(mvt_time, "secs")))
-
-# Define timeline 
-# * The timeline is based on a transmission interval of ~2 mins
-# * (The step length (m) in ~2 mins given {mvt_speed} is {mvt_speed} * {trms_time})
-# * (The angle is simulated every {mvt_time} s)
-timeline <- seq.POSIXt(start, end, by = paste(trms_time, "secs"))
-
-# Validate that the timeline spans the detection time series for the ID
-stopifnot(interval(min(dets$timestamp), max(dets$timestamp)) %within% interval(min(timeline), max(timeline)))
-
-
-###########################
-#### Movement model
-
-#### Movement & timeline validation
-# Check simulated step lengths and turning angles at 127 s resolution 
-# * The path was simulated with 5000 steps, each of {mvt_time} secs
-# * complete_simulated_transmissions_regions.rds contains the 'full' path @ resolution of 127 s
-# * Step lengths should match {mvt_speed} (m/s) * {trms_time} (s)
-mvt_len <- mvt_speed * trms_time
-if (FALSE) {
-  movements <- 
-    path |> 
-    lazy_dt() |> 
-    select(sim_id, date = timestamp, x, y) |> 
-    as.data.frame() |> 
-    bayesmove::prep_data(coord.names = c("x", "y"), id = "sim_id")
-  unique(diff(movements$date)) # time stamps evenly spaced
-  unique(movements$step)       # step lengths not exactly equal 
-  hist(movements$step)         # but most step lengths are correct
-  unique(movements$angle)      # angles (radians)
-}
-# Check distance of individual to receiver @ moment of detection
-# TO DO
-
-
-head(path)
-
-ddist <- merge(detections, moorings, by = "receiver_id")
-ddist <- merge(ddist, path, by = "timestamp")
-head(ddist)
-dist <- terra::distance(cbind(ddist$receiver_x, ddist$receiver_y),
-                        cbind(ddist$x, ddist$y), pairwise = TRUE, lonlat = FALSE)
-
-max(dist)
-
-
-#### Define movement model
-# Paths were simulated via glatos::crw_in_polygon() which calls glatos::crw()
-# * https://github.com/ocean-tracking-network/glatos/blob/main/R/sim-crw_in_polygon.r
-# * https://github.com/ocean-tracking-network/glatos/blob/main/R/simutil-crw.r
-# Step length in {trms_time} given {mvt_speed} is {mvt_speed} (m/s) * {trms_time} (s)
-# heading_{t = 1} = Uniform(0, 360) 
-# heading_{t > 1} = Normal(0, meta$theta) + cumsum(heading{t = 1, ..., t}) 
-# Angles updated every {mvt_time} (s) / {trms_time} (s) time steps
-# (Internally glatos enlarges the SD if the simulation steps outside the polygon!)
-state              <- "StateXYD"
-model_move         <- move_xyd(length = mvt_len, theta = meta$theta)
-update_angle_every <- round(mvt_time / trms_time)
-julia_assign("update_angle_every", update_angle_every)
-julia_command('include("Julia/src/model-movement.jl");')
-
-
-###########################
-#### Define observation model
-
-model_obs   <- c("ModelObsAcousticLogisTrunc", "ModelObsAcousticContainer")
-acoustics   <- assemble_acoustics(.timeline = timeline, .acoustics = dets, .moorings = moorings)
-containers  <- assemble_acoustics_containers(.acoustics = acoustics, 
-                                            .direction = "forward", 
-                                            .mobility = mvt_len, 
-                                            .threshold = ydist)
-yobs        <- list(ModelObsAcousticLogisTrunc = acoustics, 
-                    ModelObsAcousticContainer = containers)
+#### Define observation models
+# Assemble acoustics (0, 1)
+moorings[, receiver_gamma := parameters$model_obs$receiver_gamma]
+acoustics   <- assemble_acoustics(.timeline   = timeline, 
+                                  .detections = dets, 
+                                  .moorings   = moorings)
+# Assemble containers
+containers  <- assemble_acoustics_containers(.timeline  = timeline, 
+                                             .acoustics = acoustics, 
+                                             .mobility  = mobility, 
+                                             .threshold = map_len)
+# Define yobs (forward & backward)
+yobs_fwd <- list(ModelObsAcousticLogisTrunc = acoustics, 
+                 ModelObsAcousticContainer  = containers$forward)
+yobs_bwd <- list(ModelObsAcousticLogisTrunc = acoustics, 
+                 ModelObsAcousticContainer  = containers$backward)
 
 
 ###########################
@@ -160,18 +95,14 @@ yobs        <- list(ModelObsAcousticLogisTrunc = acoustics,
 #### Algorithm runs 
 
 #### Define filter arguments 
-args <- list(.map = map, 
-             .timeline = timeline, 
+args <- list(.timeline = timeline, 
              .state = state, 
              .xinit = NULL, 
-             .xinit_pars = list(mobility = mvt_len),
-             .yobs = yobs, 
-             .model_obs = model_obs, 
+             .yobs = yobs_fwd,
              .model_move = model_move, 
-             .n_particle = 10000L, 
+             .n_particle = 1e4L, 
              .direction = "forward"
              )
-
 
 #### Run forward filter 
 # * NB: Setting observations is slow (1 min)
@@ -179,14 +110,7 @@ args <- list(.map = map,
 fwd <- do.call(pf_filter, args, quote = TRUE)
 
 #### Run backward filter
-# * Update containers & yobs for .direction = "backward", then run filter
-containers      <- assemble_acoustics_containers(.acoustics = acoustics, 
-                                                 .direction = "backward", 
-                                                 .mobility = distance, 
-                                                 .threshold = ydist)
-yobs            <- list(ModelObsAcousticLogisTrunc = acoustics, 
-                        ModelObsAcousticContainer = containers)
-args$.yobs      <- yobs
+args$.yobs      <- yobs_bwd
 args$.direction <- "backward"
 do.call(pf_filter, args, quote = TRUE)
 
