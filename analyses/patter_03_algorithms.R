@@ -26,18 +26,22 @@ library(JuliaCall)
 library(lubridate)
 library(patter)
 library(tictoc)
+dv::src()
 
 #### Load data 
-champlain  <- terra::vect("data/ChamplainRegions.shp")
-moorings   <- readRDS("data/moorings.rds")
-detections <- readRDS("data/simulated_detections.rds")
-metadata   <- readRDS("data/simulations_metadata.rds")
-dv::src()
+#  map <- terra::rast(here_input("map.tif"))
+map_len     <- qs::qread(here_input("map_len.qs"))
+start       <- qs::qread(here_input("start.qs"))
+paths       <- qs::qread(here_input("paths.qs"))
+moorings    <- qs::qread(here_input("moorings.qs"))
+detections  <- qs::qread(here_input("detections.qs"))
+metadata    <- qs::qread(here_input("metadata.qs"))
 
 #### Julia setup 
 julia_connect()
 set_seed()
-set_map()
+set_map("./data/patter/input/map.tif")
+
 
 ###########################
 ###########################
@@ -63,7 +67,7 @@ stopifnot(nrow(meta) == 1L)
 # Start time: "2022-01-01 00:00:00"
 # Simulated tracks comprised 5000 steps
 # Each step comprised 500 m
-# But velocity set to different values in transmit_along_path()
+# But velocity was set to different values in glatos::transmit_along_path()
 # I.e., For each individual, the duration of a step length is different 
 # Transmissions were generated along the paths every 120 + 7 s
 
@@ -109,6 +113,18 @@ if (FALSE) {
 }
 # Check distance of individual to receiver @ moment of detection
 # TO DO
+
+
+head(path)
+
+ddist <- merge(detections, moorings, by = "receiver_id")
+ddist <- merge(ddist, path, by = "timestamp")
+head(ddist)
+dist <- terra::distance(cbind(ddist$receiver_x, ddist$receiver_y),
+                        cbind(ddist$x, ddist$y), pairwise = TRUE, lonlat = FALSE)
+
+max(dist)
+
 
 #### Define movement model
 # Paths were simulated via glatos::crw_in_polygon() which calls glatos::crw()
