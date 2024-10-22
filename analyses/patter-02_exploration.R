@@ -93,7 +93,7 @@ max(steps)
 spar       <- MASS::fitdistr(steps, "gamma")
 step_shape <- spar$estimate["shape"] |> as.numeric()
 step_scale <- 1 / spar$estimate["rate"] |> as.numeric()
-mobility   <- 115
+mobility   <- 115.0
 # shape           rate    
 # 1.494954e+00   5.714505e-02 
 # (6.233589e-04) (2.822856e-05)
@@ -154,7 +154,8 @@ receiver_gamma <- 3240
 #### Save outputs
 
 parameters <- 
-  list(model_move = list(step = list(shape = step_shape, scale = step_scale), 
+  list(model_move = list(mobility = mobility, 
+                         step = list(shape = step_shape, scale = step_scale), 
                          angle = list(mean = angle_mean, sd = angle_sd)), 
        model_obs = list(receiver_gamma = receiver_gamma))
 
