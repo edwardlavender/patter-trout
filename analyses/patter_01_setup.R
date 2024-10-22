@@ -127,7 +127,8 @@ moorings <-
          receiver_alpha = 1.8, 
          receiver_beta = -1/200,
          # Set receiver_gamma to some high value
-         # (untruncated model used for simulation)
+         # * (Untruncated model used for simulation)
+         # * This is refined later
          receiver_gamma = 5000.0, 
          receiver_key = paste(receiver_lon, receiver_lat)) |> 
   select(receiver_id, 
