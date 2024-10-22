@@ -36,18 +36,27 @@ metadata   <- readRDS("data/simulations_metadata.rds")
 ###########################
 #### Study area (~2 s)
 
-#### Map 
+#### Build map 
+# Use a coarse map for speed sampling initial locations 
 tic()
 epsg_utm         <- "EPSG:3175"
 champlain$region <- champlain$GNIS_NAME
 champlain$land   <- as.numeric(1)
 regions <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "region", .res = 10, .plot = TRUE)
+                         .field = "region", .res = 250, .plot = TRUE)
 maps    <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "land", .res = 10, .plot = TRUE)
+                         .field = "land", .res = 250, .plot = TRUE)
 map     <- maps$SpatRaster
 map_len <- terra::ymax(map) - terra::ymin(map)
 toc()
+
+#### Examine map properties
+# Visualise map simplification
+terra::plot(map, col = "blue")
+terra::lines(champlain |> terra::project(epsg_utm))
+# Check ncell & compare to dat_gebco() for reference
+terra::ncell(map)
+terra::ncell(dat_gebco())
 
 #### Validity map
 # TO DO
@@ -215,6 +224,7 @@ names(timelines) <- ids
 ###########################
 #### Save datasets
 
+#### Write datasets
 terra::writeRaster(map, here_input("map.tif"), overwrite = TRUE)
 qs::qsave(map_len, here_input("map_len.qs"))
 qs::qsave(timelines, here_input("timelines.qs"))
@@ -222,6 +232,8 @@ qs::qsave(moorings, here_input("moorings.qs"))
 qs::qsave(detections, here_input("detections.qs"))
 qs::qsave(metadata, here_input("metadata.qs"))
 
+#### Check sizes 
+file.size(here_input("map.tif")) / 1e6 # MB
 
 #### End of code. 
 ###########################
