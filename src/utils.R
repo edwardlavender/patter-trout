@@ -1,9 +1,9 @@
-here_input <- function() {
-  here::here("data", "patter", "input")
+here_input <- function(...) {
+  here::here("data", "patter", "input", ...)
 }
 
-here_output <- function() {
-  here::here("data", "patter", "output")
+here_output <- function(...) {
+  here::here("data", "patter", "output", ...)
 }
 
 os_linux <- function() {
