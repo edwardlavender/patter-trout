@@ -22,7 +22,7 @@ function Patter.simulate_step(state::StateXYD, model_move::ModelMoveXYD, t::Int6
 end 
 
 function Patter.logpdf_step(state_from::StateXYD, state_to::StateXYD, model_move::ModelMoveXYD, t::Int64, length::Float64, angle::Float64) 
-    angle_delta = abs_angle_difference(angle, state_from.angle)
+    angle_delta = Patter.abs_angle_difference(angle, state_from.angle)
     logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle_delta, angle_delta)
 end 
 
