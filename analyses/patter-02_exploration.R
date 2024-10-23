@@ -29,7 +29,7 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-#  map <- terra::rast(here_input("map.tif"))
+map <- terra::rast(here_input("map.tif"))
 map_len     <- qs::qread(here_input("map_len.qs"))
 start       <- qs::qread(here_input("start.qs"))
 paths       <- qs::qread(here_input("paths.qs"))
@@ -101,6 +101,10 @@ hist(steps, prob = TRUE)
 curve(dgamma(x, shape = step_shape, scale = step_scale), 
       lwd = 3, add = TRUE)
 toc()
+
+#### Compute validity map from mobility
+vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)
+terra::writeRaster(vmap, here_input("vmap.tif"), overwrite = TRUE)
 
 #### Examine turning angles
 # This is a quick way of generating an approximately suitable model across all individuals
