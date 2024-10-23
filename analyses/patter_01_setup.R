@@ -234,6 +234,7 @@ names(timelines) <- ids
 
 #### Write datasets
 terra::writeRaster(map, here_input("map.tif"), overwrite = TRUE)
+terra::writeRaster(regions$SpatRaster, here_input("regions.tif"), overwrite = TRUE)
 qs::qsave(map_len, here_input("map_len.qs"))
 qs::qsave(timelines, here_input("timelines.qs"))
 qs::qsave(moorings, here_input("moorings.qs"))
