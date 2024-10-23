@@ -54,6 +54,14 @@ toc()
 # Visualise map simplification
 terra::plot(map, col = "blue")
 terra::lines(champlain |> terra::project(epsg_utm))
+# Zoom-in to check resolution
+map_zoom <- terra::crop(map, 
+                        cbind(1787707, 977397.3) |>
+                          terra::vect() |>
+                          terra::buffer(width = 10000) |>
+                          terra::ext())
+terra::plot(map_zoom)
+terra::lines(champlain |> terra::project(epsg_utm))
 # Check ncell & compare to dat_gebco() for reference
 terra::ncell(map)
 terra::ncell(dat_gebco())
