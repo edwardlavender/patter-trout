@@ -168,7 +168,6 @@ args <- list(.timeline = timeline,
 #### Run forward filter 
 # Setting initial observations is slow (~1 min)
 # Set yobs to missing in `args` to speed up multiple runs 
-# 
 fwd <- do.call(pf_filter, args, quote = TRUE)
 # qs::qsave(fwd, here_output("tmp", "tmp.qs"))
 
