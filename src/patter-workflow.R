@@ -192,7 +192,8 @@ patter_workflow <- function(id,
                                 time        = as.numeric(difftime(t2, t1, units = "mins")),
                                 convergence = NA_integer_, 
                                 trials      = NA_integer_)
-  qs::qsave(convergence_dt, here_output(glue("convergence-smo-{id}.qs")))
+  qs::qsave(convergence_dt, 
+            here_output("convergence", glue("convergence-smo-{id}.qs")))
   qs::qsave(smo, here_output("particles", glue("smo-{id}.qs")))
   # file_size(here_output("particles", glue("smo-{id}.qs")))
   
