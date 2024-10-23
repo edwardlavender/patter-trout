@@ -27,7 +27,7 @@ patter_workflow <- function(id,
   timeline <- timelines[[id]]
   
   #### (optional) Examine individual-specific data
-  if (interactive) {
+  if (!os_linux() && interactive) {
     
     # Examine simulated step lengths 
     dist <- terra::distance(cbind(path$x, path$y), 
