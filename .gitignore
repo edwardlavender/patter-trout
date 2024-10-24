@@ -2,6 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
+._*
 data
 doc
 analyses/deprecated
