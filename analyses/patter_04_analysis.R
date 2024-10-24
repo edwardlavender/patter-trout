@@ -19,9 +19,13 @@ rm(list = ls())
 dv::clear()
 
 #### Essential packages
+Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
+library(glue)
+library(patter)
 library(tictoc)
 dv::src()
 
@@ -29,15 +33,18 @@ dv::src()
 map_region <- terra::rast(here_input("regions.tif"))
 paths      <- qs::qread(here_input("paths.qs"))
 
+#### Set options
+op <- options(terra.pal = rev(terrain.colors(256L)))
+
 
 ###########################
 ###########################
 #### Algorithm properties
 
-# Define runs
+#### Define runs
 runs <- c("forward", "backward", "smoothing")
 
-# Read convergence properties
+#### Read convergence properties
 convergence <- 
   here_output("convergence") |>
   list.files(full.names = TRUE) |> 
@@ -47,13 +54,35 @@ convergence <-
   arrange(sim_id, direction) |> 
   as.data.table()
 
-# Examine convergence failures
+#### Examine convergence failures
 convergence[direction == "forward" & convergence == 0L, ]
 convergence[direction == "backward" & convergence == 0L, ]
 
-# Examine computation time
-utils.add::basic_stats(convergence$time[convergence$direction != "smoothing"])
-utils.add::basic_stats(convergence$time[convergence$direction == "smoothing"])
+#### Examine computation time
+if (requireNamespace("utils.add", quietly = TRUE)) {
+  utils.add::basic_stats(convergence$time[convergence$direction != "smoothing"])
+  utils.add::basic_stats(convergence$time[convergence$direction == "smoothing"])
+}
+
+
+###########################
+###########################
+#### Example maps
+
+#### Define example individual (path & states)
+id     <- 1L
+path   <- paths[sim_id == id, ]
+states <- qs::qread(here_output("particles", glue("smo-{id}.qs")))$states
+
+#### Visualise regions, path & states
+# The reconstructed map should look reasonable
+pp <- par(mfrow = c(1, 3))
+tic()
+terra::plot(map_region)
+map_pou(.map = map_region, .coord = path)
+map_pou(.map = map_region, .coord = states)
+toc()
+par(pp)
 
 
 ###########################
@@ -72,11 +101,22 @@ residency <-
   here_output("residency", "qresidency") |>
   list.files(full.names = TRUE) |>
   lapply(qs::qread) |> 
-  rbindlist()
+  rbindlist() |> 
+  arrange(sim_id, region, estimate) |> 
+  as.data.table()
+# Examine
+head(residency, 10)
 
 #### Visualise residency ~ individual, coloured by truth/algorithm
-# 
-# > TO DO
+png(here_fig("residency.png"), 
+    height = 5, width = 10, units = "in", res = 600)
+residency |>
+  ggplot(aes(x = region, y = perc, fill = estimate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ sim_id) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Region", y = "Percentage", fill = "Estimate")
+dev.off()
 
 
 #### End of code.

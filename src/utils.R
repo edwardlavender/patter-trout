@@ -1,3 +1,7 @@
+here_fig <- function(...) {
+  here::here("fig", ...)
+}
+
 here_input <- function(...) {
   here::here("data", "patter", "input", ...)
 }
