@@ -23,6 +23,7 @@ Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(dv)
 library(JuliaCall)
 library(lubridate)
 library(patter)
@@ -54,16 +55,18 @@ metadata    <- qs::qread(here_input("metadata.qs"))
 # Angles updated every {mvt_time} (s) / {trms_time} (s) time steps
 # (Internally glatos enlarges the SD if the simulation steps outside the polygon!)
 
-#### Compute path metrics (~1.25 mins with 12 cl)
+#### Compute path metrics
 # `complete_simulated_transmissions_regions.rds` contains the 'full' path @ resolution of 127 s
 # We can use this to conveniently check the distribution of step lengths & turning angles
 # > Each simulated path was 5000 steps
 # > Each step was 500 m
 # > During a step, velocity was set to different values
 # > Hence, steps lasted different durations (500 / velocity)
-
-paths_metrics <- 
-  cl_lapply(unique(paths$sim_id), .cl = 12L, .fun = function(id) {
+outfile <- here_input("path-metrics.qs")
+if (!file.exists(outfile)) {
+  
+  # ~1.25 mins with 12 cl
+  paths_metrics <- cl_lapply(unique(paths$sim_id), .cl = 12L, .fun = function(id) {
     
     path_metrics <- 
       paths |> 
@@ -81,18 +84,30 @@ paths_metrics <-
       hist(path_metrics$step)         # but most step lengths are correct
       unique(path_metrics$angle)      # angles (radians)
     }
-
+    
     path_metrics
     
   }) |> rbindlist()
+  
+  qs::qsave(path_metrics, outfile)
+  
+} else {
+  paths_metrics <- qs::qread(outfile)
+}
 
-#### Examine step lengths (~2 mins)
+#### Examine step lengths
 # This is a quick way of generating an approximately suitable model across all individuals
 tic()
 steps <- paths_metrics$step[!is.na(paths_metrics$step)]
 max(steps)
 # 114.355 
-spar       <- MASS::fitdistr(steps, "gamma")
+spar <- run(file = here_input("step-fitdistr.qs"), 
+            expr = {
+              # ~2 mins
+              MASS::fitdistr(steps, "gamma")
+            }, 
+            read = qs::qread, 
+            write = qs::qsave)
 step_shape <- spar$estimate["shape"] |> as.numeric()
 step_scale <- 1 / spar$estimate["rate"] |> as.numeric()
 mobility   <- 115.0
