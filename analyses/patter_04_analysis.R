@@ -104,10 +104,13 @@ residency <-
   rbindlist() |> 
   arrange(sim_id, region, estimate) |> 
   as.data.table()
-# Examine
+# Examine estimates
 head(residency, 10)
+residency[is.na(region), ]
 
 #### Visualise residency ~ individual, coloured by truth/algorithm
+# NB: residency includes an NA category 
+# This is probably due to the simplification of the regions polygon 
 png(here_fig("residency.png"), 
     height = 5, width = 10, units = "in", res = 600)
 residency |>
