@@ -60,6 +60,9 @@ convergence[direction == "backward" & convergence == 0L, ]
 
 #### Examine computation time
 if (requireNamespace("utils.add", quietly = TRUE)) {
+  # On siam-linux20:
+  # * ~ 1.5 hours for each filter (x 2)
+  # * ~ 2.0 hours for smoothing
   utils.add::basic_stats(convergence$time[convergence$direction != "smoothing"])
   utils.add::basic_stats(convergence$time[convergence$direction == "smoothing"])
 }
