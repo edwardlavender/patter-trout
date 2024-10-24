@@ -19,6 +19,7 @@ rm(list = ls())
 dv::clear()
 
 #### Essential packages
+Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)

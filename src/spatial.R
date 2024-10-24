@@ -1,4 +1,4 @@
-if (Sys.info()["nodename"] != "siam-linux20") {
+if (Sys.getenv("JULIA_SESSION") == "FALSE") {
   
   #' Convert shapefile to SpatRaster
   as_SpatRaster <- function(.x, .simplify = NULL, .utm = NULL,
