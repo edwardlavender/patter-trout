@@ -9,6 +9,9 @@ if (Sys.info()["nodename"] != "siam-linux20") {
     
     path <- paths[sim_id == id, ]
     smo  <- qs::qread(here_output("particles", glue("smo-{id}.qs")))
+    if (!file.exists(smo)) {
+      return(NULL)
+    }
     
     #### True residency in each region
     path_res <- 
