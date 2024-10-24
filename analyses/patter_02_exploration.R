@@ -125,6 +125,10 @@ mobility   <- 115.0
 hist(steps, prob = TRUE)
 curve(dgamma(x, shape = step_shape, scale = step_scale), 
       lwd = 3, add = TRUE)
+# Convergence
+# > The averaged gamma model works for individual 1 (12.7 m step length)
+# > But fails for individual 2 (63.5 m step length)
+# > A more flexible model is required to handle the range of movements across all individuals
 
 #### Compute validity map from mobility
 vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)

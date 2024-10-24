@@ -62,7 +62,7 @@ patter_workflow <- function(id,
   # > ... as many trials are required to avoid jumps onto land
   state      <- "StateXYD"
   model_move <- move_xyd(mobility = mobility, 
-                         dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
+                         dbn_length = glue("truncated(Gamma({sshape}, {60}), lower = 0.0, upper = {mobility})"), 
                          dbn_angle_delta = glue("Normal({0.0}, {0.4})"))
 
   #### Visualise movement model 
@@ -73,7 +73,7 @@ patter_workflow <- function(id,
     curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = sshape, scale = sscale), 
           from = 0, to = mobility, n = 1e3L,
           xlab = "Step length (m)", ylab = "Density")
-    abline(v= max(dist), col = "red")
+    abline(v = max(dist), col = "red")
     curve(dnorm(x, 0, 0.25),
           from = -pi - 0.1, to = pi + 0.1, n = 1e3L,
           xlab = "Turning angle (rad)", ylab = "Density")
