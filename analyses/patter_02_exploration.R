@@ -19,6 +19,7 @@ rm(list = ls())
 dv::clear()
 
 #### Essential packages
+Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
@@ -29,7 +30,7 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-map <- terra::rast(here_input("map.tif"))
+map         <- terra::rast(here_input("map.tif"))
 map_len     <- qs::qread(here_input("map_len.qs"))
 start       <- qs::qread(here_input("start.qs"))
 paths       <- qs::qread(here_input("paths.qs"))
@@ -118,6 +119,23 @@ angle_sd   <- apar$estimate["sd"] |> as.numeric()
 hist(angles, prob = TRUE)
 curve(dnorm(x, mean = angle_mean, sd = angle_sd), 
       lwd = 3, add = TRUE)
+
+#### Movement model dimensions
+png(here_fig("model-move.png"), height = 10, width = 10, units = "in", res = 600)
+pp <- par(mfrow = c(1, 2))
+# Step lengths
+hist(steps, prob = TRUE, 
+     xlab = "Step length (m)", ylab = "Density")
+curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = sshape, scale = sscale), 
+      from = 0, to = mobility, n = 1e3L, add = TRUE)
+abline(v = max(dist), col = "red")
+# Turning angles
+hist(angles, prob = TRUE, 
+     xlab = "Turning angle (rad)", ylab = "Density")
+curve(dnorm(x, 0, 0.4),
+      from = -pi - 0.1, to = pi + 0.1, n = 1e3L, add = TRUE)
+par(pp)
+dev.off()
 
 
 ###########################
