@@ -52,7 +52,7 @@ parameters  <- qs::qread(here_input("parameters.qs"))
 julia_connect()
 julia_source("./Julia/src/model-move.jl")
 set_seed()
-set_map("./data/patter/input/map.tif")
+set_map(here_input("map.tif"))
 set_vmap(.vmap = here_input("vmap.tif"))
 
 #### Testing
