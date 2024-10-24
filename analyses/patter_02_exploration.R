@@ -142,7 +142,7 @@ pp <- par(mfrow = c(1, 2))
 # Step lengths
 hist(steps, prob = TRUE, 
      xlab = "Step length (m)", ylab = "Density")
-curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = step_shape, scale = step_scale), 
+curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = step_shape, scale = 60), 
       from = 0, to = mobility, n = 1e3L, lwd = 3, add = TRUE)
 # Turning angles
 hist(angles, prob = TRUE, 
@@ -184,6 +184,21 @@ ddists <-
 max(ddists$dist)
 # 3236.828
 receiver_gamma <- 3240
+
+#### Examine movement observations
+# What can we learn about movements from the observations? 
+# Is there a case to increase information in the prior? 
+if (requireNamespace("flapper", quietly = TRUE)) {
+  detections[, fct := sim_id]
+  msp <- sp::SpatialPoints(moorings[, c("receiver_x", "receiver_y")], sp::CRS(terra::crs(map)))
+  msp <- sp::SpatialPointsDataFrame(msp, data.frame(receiver_id = moorings$receiver_id))
+  mvt <- flapper::get_mvt_mobility_from_acoustics(data = detections, 
+                                                  fct = "sim_id", 
+                                                  moorings = msp, 
+                                                  detection_range = receiver_gamma, 
+                                                  step = 120,
+                                                  transmission_interval = 127)
+}
 
 
 ###########################
