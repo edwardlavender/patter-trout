@@ -37,7 +37,7 @@ if (Sys.info()["nodename"] != "siam-linux20") {
     
     #### Collect data
     res <- rbind(path_res, part_res)
-    qs::qsave(res, here_output("residency", "qresidency", glue("{id}-qs")))
+    qs::qsave(res, here_output("residency", "qresidency", glue("{id}.qs")))
     
     NULL
     
