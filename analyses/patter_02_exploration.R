@@ -27,6 +27,7 @@ library(JuliaCall)
 library(lubridate)
 library(patter)
 library(tictoc)
+library(truncdist)
 dv::src()
 
 #### Load data 
@@ -121,19 +122,18 @@ curve(dnorm(x, mean = angle_mean, sd = angle_sd),
       lwd = 3, add = TRUE)
 
 #### Movement model dimensions
-png(here_fig("model-move.png"), height = 10, width = 10, units = "in", res = 600)
+png(here_fig("model-move.png"), height = 5, width = 10, units = "in", res = 600)
 pp <- par(mfrow = c(1, 2))
 # Step lengths
 hist(steps, prob = TRUE, 
      xlab = "Step length (m)", ylab = "Density")
-curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = sshape, scale = sscale), 
-      from = 0, to = mobility, n = 1e3L, add = TRUE)
-abline(v = max(dist), col = "red")
+curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = step_shape, scale = step_scale), 
+      from = 0, to = mobility, n = 1e3L, lwd = 3, add = TRUE)
 # Turning angles
 hist(angles, prob = TRUE, 
      xlab = "Turning angle (rad)", ylab = "Density")
 curve(dnorm(x, 0, 0.4),
-      from = -pi - 0.1, to = pi + 0.1, n = 1e3L, add = TRUE)
+      from = -pi - 0.1, to = pi + 0.1, n = 1e3L, lwd = 3, add = TRUE)
 par(pp)
 dev.off()
 
