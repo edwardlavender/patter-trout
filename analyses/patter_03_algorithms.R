@@ -19,6 +19,7 @@ rm(list = ls())
 dv::clear()
 
 #### Essential packages
+Sys.setenv("JULIA_SESSION" = TRUE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
@@ -56,7 +57,7 @@ set_map(here_input("map.tif"))
 set_vmap(.vmap = here_input("vmap.tif"))
 
 #### Testing
-test <- TRUE
+test <- FALSE
 if (test) {
   # For testing, use a short timeline
   timelines <- lapply(timelines, function(timeline) timeline[1:1000])
@@ -64,7 +65,7 @@ if (test) {
 
 #### Run workflow for each individual
 tic()
-cl_lapply(1:100L, function(id) {
+cl_lapply(3:100L, function(id) {
   patter_workflow(id = id, 
                   map = NULL, map_len = map_len, 
                   timeline = timelines, paths = paths, 
