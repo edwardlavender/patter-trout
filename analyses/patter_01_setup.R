@@ -227,6 +227,12 @@ timelines <-
     timeline
 }) 
 names(timelines) <- ids
+# Examine timeline ranges
+timestats <-
+  data.table(sim_id = 1:100L, 
+             duration = sapply(timelines, 
+                               \(x)  as.numeric(difftime(max(x), min(x), units = "weeks"))))
+utils.add::basic_stats(timestats$duration)
 
 
 ###########################
