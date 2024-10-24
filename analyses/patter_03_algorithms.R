@@ -63,9 +63,16 @@ if (test) {
   timelines <- lapply(timelines, function(timeline) timeline[1:1000])
 }
 
+#### Timing & parallelisation
+# Approximate timing for individual 1, forward filter on siam-linux20:
+# * 15 threads: ~28 s vs. 12 threads MacBook ~10 s
+# * 30 threads: ~25 s
+# * 64 threads: 28 s
+# * 120 threads: 53 s
+
 #### Run workflow for each individual
 tic()
-cl_lapply(3:100L, function(id) {
+cl_lapply(1:100L, function(id) {
   patter_workflow(id = id, 
                   map = NULL, map_len = map_len, 
                   timeline = timelines, paths = paths, 
