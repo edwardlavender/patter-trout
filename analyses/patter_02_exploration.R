@@ -96,11 +96,19 @@ if (!file.exists(outfile)) {
 }
 
 #### Examine step lengths
-# This is a quick way of generating an approximately suitable model across all individuals
-tic()
+# Examine step lengths by individual
+# * id 1: 12.7
+# * id 2: 63.5
+# * id 7: 114
+paths_metrics |> 
+  group_by(sim_id) |> 
+  summarise(step = max(step, na.rm = TRUE)) |> 
+  arrange(as.integer(sim_id))
+# Estimate mobility 
 steps <- paths_metrics$step[!is.na(paths_metrics$step)]
 max(steps)
 # 114.355 
+# Estimate approximately suitable model across all individuals
 spar <- run(file = here_input("step-fitdistr.qs"), 
             expr = {
               # ~2 mins
@@ -117,7 +125,6 @@ mobility   <- 115.0
 hist(steps, prob = TRUE)
 curve(dgamma(x, shape = step_shape, scale = step_scale), 
       lwd = 3, add = TRUE)
-toc()
 
 #### Compute validity map from mobility
 vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)

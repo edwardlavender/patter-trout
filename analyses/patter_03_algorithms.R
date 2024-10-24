@@ -71,8 +71,9 @@ if (test) {
 # * 120 threads: 53 s
 
 #### Run workflow for each individual
+# To test convergence, use individuals 1 (12.7 m), 2 (63.5 m) and 7 (114 m)
 tic()
-cl_lapply(1:100L, function(id) {
+cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
                   map = NULL, map_len = map_len, 
                   timeline = timelines, paths = paths, 
