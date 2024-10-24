@@ -137,7 +137,7 @@ patter_workflow <- function(id,
                .model_move = model_move, 
                .n_particle = 2.5e4L,
                .n_record = 500L,
-               .n_iter = 5L,
+               .n_iter = 2L,
                .direction = "forward"
   )
   
@@ -150,6 +150,8 @@ patter_workflow <- function(id,
   t2             <- Sys.time()
   convergence_dt <- data.table(sim_id      = id, 
                                direction   = "forward", 
+                               np          = args$.n_particle, 
+                               nt          = length(timeline),
                                time        = as.numeric(difftime(t2, t1, units = "mins")),
                                convergence = fwd$convergence, 
                                trials      = fwd$trials)
@@ -171,6 +173,8 @@ patter_workflow <- function(id,
   t2              <- Sys.time()
   convergence_dt  <- data.table(sim_id      = id, 
                                 direction   = "backward", 
+                                np          = args$.n_particle, 
+                                nt          = length(timeline),
                                 time        = as.numeric(difftime(t2, t1, units = "mins")),
                                 convergence = bwd$convergence, 
                                 trials      = bwd$trials)
@@ -189,6 +193,8 @@ patter_workflow <- function(id,
   t2   <- Sys.time()
   convergence_dt  <- data.table(sim_id      = id, 
                                 direction   = "smoothing", 
+                                np          = args$.n_particle, 
+                                nt          = length(timeline),
                                 time        = as.numeric(difftime(t2, t1, units = "mins")),
                                 convergence = NA_integer_, 
                                 trials      = NA_integer_)
