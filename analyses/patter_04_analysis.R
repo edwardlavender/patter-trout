@@ -41,6 +41,13 @@ op <- options(terra.pal = rev(terrain.colors(256L)))
 ###########################
 #### Algorithm properties
 
+#
+#
+# TO DO
+# Handle outputs from different models
+#
+#
+
 #### Define runs
 runs <- c("forward", "backward", "smoothing")
 
