@@ -72,20 +72,22 @@ if (test) {
 
 #### Cleanup
 if (FALSE) {
-  old <- list.files(here_output_sim(), recursive = TRUE)
-  unlink(old)
+  old <- list.files(here_output_sim(), pattern = "\\.qs$", recursive = TRUE, full.names = TRUE)
+  file.remove(old)
 }
 
 #### Run workflow for each individual
 # To test convergence, use individuals 1 (12.7 m), 2 (63.5 m) and 7 (114 m)
+# Repeat for each movement model ("low", "medium", "high")
 tic()
-cl_lapply(c(7L), function(id) {
+cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
                   map = NULL, map_len = map_len, 
                   timelines = timelines, paths = paths, 
                   moorings = moorings, detections = detections, 
                   metadata = metadata, 
-                  parameters = parameters, interactive = FALSE)
+                  parameters = parameters, model_move = "low",
+                  interactive = FALSE)
   
 })
 toc()
