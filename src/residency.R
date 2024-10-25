@@ -1,6 +1,6 @@
 if (Sys.getenv("JULIA_SESSION") == "FALSE") {
   
-  # Quick overall residency estimation
+  #' Quick overall residency estimation
   # * id:    sim_id
   # * map:   raster with regions defined
   # * paths: data.table of simulated paths
