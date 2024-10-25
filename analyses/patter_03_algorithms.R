@@ -70,24 +70,25 @@ if (test) {
 # * 64 threads: 28 s
 # * 120 threads: 53 s
 
+#### Cleanup
+if (FALSE) {
+  old <- list.files(here_output_sim(), recursive = TRUE)
+  unlink(old)
+}
+
 #### Run workflow for each individual
 # To test convergence, use individuals 1 (12.7 m), 2 (63.5 m) and 7 (114 m)
 tic()
-cl_lapply(c(1L, 2L, 7L), function(id) {
+cl_lapply(c(7L), function(id) {
   patter_workflow(id = id, 
                   map = NULL, map_len = map_len, 
-                  timeline = timelines, paths = paths, 
+                  timelines = timelines, paths = paths, 
                   moorings = moorings, detections = detections, 
                   metadata = metadata, 
                   parameters = parameters, interactive = FALSE)
   
 })
 toc()
-
-#### Convergence record
-# ID 1: 
-# * Random walk with uniform heading: convergence failures @ time ~62172 even with many particles
-# * Moderately correlated random walk: success after ~1.11 hours on 12 workers (5e4L)
 
 
 #### End of code. 
