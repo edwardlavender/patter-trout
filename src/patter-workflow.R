@@ -9,12 +9,12 @@
 patter_workflow <- function(id, 
                             map = NULL, map_len,
                             timelines, paths, moorings, detections, metadata, 
-                            parameters, model_move = c("low", "medium", "high"),
+                            parameters, model_move_type = c("low", "medium", "high"),
                             interactive = TRUE) {
   
   # id          <- 2L
   # interactive <- TRUE
-  model_move    <- match.arg(model_move)
+  model_move_type    <- match.arg(model_move_type)
 
   
   ###########################
@@ -82,7 +82,7 @@ patter_workflow <- function(id,
 
   #### Correlated random walk (low activity)
   # TO DO
-  if (model_move == "low") {
+  if (model_move_type == "low") {
     state      <- "StateXYD"
     sspec      <- "gamma"
     sshape     <- 3
@@ -101,7 +101,7 @@ patter_workflow <- function(id,
   }
   
   #### Correlated random walk (medium activity)
-  if (model_move == "medium") {
+  if (model_move_type == "medium") {
     state      <- "StateXYD"
     sspec       <- "norm"
     sshape     <- 63.5
@@ -114,7 +114,7 @@ patter_workflow <- function(id,
   }
 
   #### Correlated random walk (high activity)
-  if (model_move == "high") {
+  if (model_move_type == "high") {
     state      <- "StateXYD"
     sspec      <- "gamma"
     sshape     <- 20
@@ -223,14 +223,14 @@ patter_workflow <- function(id,
   t2             <- Sys.time()
   convergence_dt <- data.table(sim_id      = id, 
                                direction   = "forward", 
-                               model_move  = model_move,
+                               model_move  = model_move_type,
                                np          = args$.n_particle, 
                                nt          = length(timeline),
                                time        = as.numeric(difftime(t2, t1, units = "mins")),
                                convergence = fwd$convergence, 
                                trials      = fwd$trials)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move, glue("convergence-fwd-{id}.qs")))
+            here_output_sim("convergence", model_move_type, glue("convergence-fwd-{id}.qs")))
   if (!fwd$convergence) {
     return(NULL)
   }
@@ -247,14 +247,14 @@ patter_workflow <- function(id,
   t2              <- Sys.time()
   convergence_dt  <- data.table(sim_id      = id, 
                                 direction   = "backward", 
-                                model_move  = model_move,
+                                model_move  = model_move_type,
                                 np          = args$.n_particle, 
                                 nt          = length(timeline),
                                 time        = as.numeric(difftime(t2, t1, units = "mins")),
                                 convergence = bwd$convergence, 
                                 trials      = bwd$trials)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move, glue("convergence-bwd-{id}.qs")))
+            here_output_sim("convergence", model_move_type, glue("convergence-bwd-{id}.qs")))
   if (!bwd$convergence) {
     return(NULL)
   }
@@ -267,7 +267,7 @@ patter_workflow <- function(id,
   smo  <- pf_smoother_two_filter()
   t2   <- Sys.time()
   convergence_dt  <- data.table(sim_id      = id, 
-                                model_move  = model_move,
+                                model_move  = model_move_type,
                                 direction   = "smoothing", 
                                 np          = args$.n_particle, 
                                 nt          = length(timeline),
@@ -275,9 +275,9 @@ patter_workflow <- function(id,
                                 convergence = NA_integer_, 
                                 trials      = NA_integer_)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move, glue("convergence-smo-{id}.qs")))
-  qs::qsave(smo, here_output_sim("particles", model_move, glue("smo-{id}.qs")))
-  # file_size(here_output_sim("particles", model_move, glue("smo-{id}.qs"))) # 757 MB
+            here_output_sim("convergence", model_move_type, glue("convergence-smo-{id}.qs")))
+  qs::qsave(smo, here_output_sim("particles", model_move_type, glue("smo-{id}.qs")))
+  # file_size(here_output_sim("particles", model_move_type, glue("smo-{id}.qs"))) # 757 MB
   
   NULL
   
