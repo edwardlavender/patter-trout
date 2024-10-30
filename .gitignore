@@ -7,4 +7,5 @@
 data
 doc
 R/deprecated
+R/dev/
 fig
