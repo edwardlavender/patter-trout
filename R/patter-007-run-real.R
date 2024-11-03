@@ -69,7 +69,7 @@ ids <- unique(detections$individual_id)
 tic()
 length(ids)
 # debug(patter_workflow)
-cl_lapply(ids, function(id) {
+out <- cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
                   moorings = moorings, detections = detections, 
                   model_move = "real", 

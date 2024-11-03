@@ -163,7 +163,7 @@ patter_workflow <- function(id,
   fwd            <- do.call(pf_filter, args, quote = TRUE)
   t2             <- Sys.time()
   if (trial) {
-    return(NULL)
+    return(fwd$convergence)
   }
   convergence_dt <- data.table(individual_id = id, 
                                direction    = "forward", 
