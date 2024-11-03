@@ -6,16 +6,28 @@
 # * Julia is connected
 # * the map & vmap exist in the Julia session
 
-# TO DO 
-# Change input to data.table that includes output directories
-
 patter_workflow <- function(id, 
                             timelines = NULL, 
                             moorings, detections, 
-                            model_move_type = c("sim-low", "sim-medium", "sim-high", "real")) {
+                            model_move_type = c("sim-low", "sim-medium", "sim-high", "real"),
+                            n_particle = 1000L,
+                            trial = FALSE,
+                            here_output) {
   
+  #### Set up 
   # id            <- 1L
   model_move_type <- match.arg(model_move_type)
+  
+  #### Build directories
+  folders <- c(here_output("convergence", model_move_type),
+               here_output("particles", model_move_type))
+  sapply(folders, function(folder) {
+    if (!dir.exists(folder)) {
+      warning(glue("Directory '{folder}' created."))
+      dir.create(folder, recursive = TRUE)
+    }
+    NULL
+  })
 
   
   ###########################
@@ -92,9 +104,10 @@ patter_workflow <- function(id,
   
   #### (2) Real-world model
   if (model_move_type == "real") {
+    state      <- "StateXYD"
     model_move <- move_xyd(mobility = 108, 
                            dbn_length = glue("truncated(Gamma({3.0}, {1/0.15}), lower = 0.0, upper = {108})"), 
-                           dbn_angle_delta = glue("Normal({0.0}, {1.0})"))
+                           dbn_angle_delta = glue("Normal({0.0}, {2.0})"))
   }
   
   #### Visualise movement model
@@ -112,7 +125,8 @@ patter_workflow <- function(id,
   #### Assemble containers
   containers  <- assemble_acoustics_containers(.timeline  = timeline, 
                                                .acoustics = acoustics, 
-                                               .mobility  = mobility)
+                                               .mobility  = mobility, 
+                                               .map       = qs::qread(here_input("map-bbox.qs")))
   
   #### Define yobs (forward & backward)
   yobs_fwd <- list(ModelObsAcousticLogisTrunc = copy(acoustics),
@@ -136,7 +150,7 @@ patter_workflow <- function(id,
                .yobs        = yobs_fwd,
                .model_move  = model_move, 
                .n_move      = 10000L,
-               .n_particle  = 2.5e4L,
+               .n_particle  = n_particle,
                .n_record    = 500L,
                .n_iter      = 1L,
                .direction   = "forward")
@@ -146,6 +160,9 @@ patter_workflow <- function(id,
   set_seed()
   fwd            <- do.call(pf_filter, args, quote = TRUE)
   t2             <- Sys.time()
+  if (trial) {
+    return(fwd)
+  }
   convergence_dt <- data.table(individual_id = id, 
                                direction    = "forward", 
                                model_move   = model_move_type,
@@ -155,12 +172,12 @@ patter_workflow <- function(id,
                                convergence  = fwd$convergence, 
                                trials       = fwd$trials)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move_type, glue("convergence-fwd-{id}.qs")))
+            here_output("convergence", model_move_type, glue("convergence-fwd-{id}.qs")))
   if (!fwd$convergence) {
     return(NULL)
   }
-  # qs::qsave(fwd, here_output_sim("tmp", "tmp.qs"))
-  # file.size(here_output_sim("tmp", "tmp.qs")) * 1e-9 # 4 GB
+  # qs::qsave(fwd, here_output("tmp", "tmp.qs"))
+  # file.size(here_output("tmp", "tmp.qs")) * 1e-9 # 4 GB
   
   #### Run backward filter
   args$.xinit     <- xinit_bwd
@@ -179,7 +196,7 @@ patter_workflow <- function(id,
                                 convergence = bwd$convergence, 
                                 trials      = bwd$trials)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move_type, glue("convergence-bwd-{id}.qs")))
+            here_output("convergence", model_move_type, glue("convergence-bwd-{id}.qs")))
   if (!bwd$convergence) {
     return(NULL)
   }
@@ -200,9 +217,9 @@ patter_workflow <- function(id,
                                 convergence   = NA_integer_, 
                                 trials        = NA_integer_)
   qs::qsave(convergence_dt, 
-            here_output_sim("convergence", model_move_type, glue("convergence-smo-{id}.qs")))
-  qs::qsave(smo, here_output_sim("particles", model_move_type, glue("smo-{id}.qs")))
-  # file_size(here_output_sim("particles", model_move_type, glue("smo-{id}.qs"))) # 757 MB
+            here_output("convergence", model_move_type, glue("convergence-smo-{id}.qs")))
+  qs::qsave(smo, here_output("particles", model_move_type, glue("smo-{id}.qs")))
+  # file_size(here_output("particles", model_move_type, glue("smo-{id}.qs"))) # 757 MB
   
   NULL
   
