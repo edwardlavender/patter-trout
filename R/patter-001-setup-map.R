@@ -24,7 +24,7 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-champlain  <- terra::vect("data/ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp")
+champlain  <- terra::vect(here_data("ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp"))
 
 
 ###########################
