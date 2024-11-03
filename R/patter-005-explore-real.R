@@ -84,7 +84,7 @@ if (requireNamespace("flapper", quietly = TRUE)) {
 # In the most extreme case (unlikely), movement speeds up to 198 m/2 min are apparent.
 # (This is the upper bound for movement speeds suggested by the data.)
 # These results are consistent for different transmission intervals
-# (But the movement model needs to consider the effect of random tranmission)
+# (But the movement model needs to consider the effect of random transmission)
 
 
 #### End of code. 
