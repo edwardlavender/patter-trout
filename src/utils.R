@@ -4,8 +4,20 @@ here_fig <- function(...) {
   here::here("fig", ...)
 }
 
+here_data <- function(...) {
+  here::here("data", ...)
+}
+
 here_input <- function(...) {
   here::here("data", "patter", "input", ...)
+}
+
+here_input_sim <- function(...) {
+  here_input("sim", ...)
+}
+
+here_input_real <- function(...) {
+  here_input("real", ...)
 }
 
 here_output <- function(...) {
@@ -13,7 +25,11 @@ here_output <- function(...) {
 }
 
 here_output_sim <- function(...) {
-  here::here("data", "patter", "output", "simulation", ...)
+  here_output("sim", ...)
+}
+
+here_output_real <- function(...) {
+  here_output("real", ...)
 }
 
 #' os_*() wrappers
