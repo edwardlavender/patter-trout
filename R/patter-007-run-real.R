@@ -59,8 +59,8 @@ if (FALSE) {
 
 #### Testing
 # Pick individuals with shorter time series for testing
-sort(unique(detections$individual_id))
-ids <- as.integer(c(26790, 26793, 26795, 26804, 24320, 24390, 24346, 24377, 24326, 26785))
+# ids <- as.integer(c(26790, 26793, 26795, 26804, 24320, 24390, 24346, 24377, 24326, 26785))
+ids <- unique(detections$individual_id)
 
 #### Timing & parallelisation
 # TO DO
