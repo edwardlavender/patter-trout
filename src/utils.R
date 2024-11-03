@@ -4,6 +4,14 @@ here_fig <- function(...) {
   here::here("fig", ...)
 }
 
+here_fig_sim <- function(...) {
+  here_fig("sim", ...)
+}
+
+here_fig_real <- function(...) {
+  here_fig("real", ...)
+}
+
 here_data <- function(...) {
   here::here("data", ...)
 }
