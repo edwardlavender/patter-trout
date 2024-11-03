@@ -82,7 +82,9 @@ cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
                   timelines = timelines,
                   moorings = moorings, detections = detections, 
-                  model_move = "sim-low")
+                  model_move = "sim-low", 
+                  n_particle = 2.5e4L,
+                  here_output = here_output_sim)
   
 })
 toc()
