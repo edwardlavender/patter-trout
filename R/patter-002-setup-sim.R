@@ -71,7 +71,7 @@ if (!file.exists(file_paths)) {
            x = sxy[, 1], y = sxy[, 2]) |>
     group_by(virt_fish) |> 
     mutate(timestep = row_number()) |> 
-    select(sim_id = virt_fish, timestep, timestamp, x, y, region = regions) |> 
+    select(individual_id = virt_fish, timestep, timestamp, x, y, region = regions) |> 
     as.data.table()
   
   #### Save 
@@ -125,16 +125,16 @@ moorings <-
 #### Update detections 
 detections <- 
   detections |> 
-  select(sim_id, 
+  select(individual_id = sim_id, 
          timestamp = "detection_timestamp_utc",
          receiver_lon = deploy_lon, 
          receiver_lat = deploy_lat) |> 
-  # Define sim_id as integer
-  mutate(sim_id = stringr::str_replace(sim_id, "sim_", ""), 
-         sim_id = as.integer(sim_id)) |>
+  # Define individual_id as integer
+  mutate(individual_id = stringr::str_replace(individual_id, "sim_", ""), 
+         individual_id = as.integer(individual_id)) |>
   mutate(receiver_key = paste(receiver_lon, receiver_lat)) |> 
   mutate(receiver_id = moorings$receiver_id[match(receiver_key, moorings$receiver_key)]) |>
-  select(sim_id, timestamp, receiver_id) |> 
+  select(individual_id, timestamp, receiver_id) |> 
   as.data.table()
 
 #### Clean up moorings
@@ -156,13 +156,14 @@ stopifnot(all(!is.na(detections$receiver_id)))
 #### Define metadata
 metadata <-
   metadata |> 
-  # Define sim_id as integer
-  mutate(sim_id = stringr::str_replace(sim_id, "sim_", ""), 
-         sim_id = as.integer(sim_id)) |>
+  # Define individual_id as integer
+  mutate(individual_id = stringr::str_replace(sim_id, "sim_", ""), 
+         individual_id = as.integer(individual_id), 
+         sim_id = NULL) |>
   as.data.table()
 
 #### Collect individual IDs (1:100)
-ids <- sort(unique(metadata$sim_id))
+ids <- sort(unique(metadata$individual_id))
 
 
 ###########################
@@ -186,7 +187,7 @@ start <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
 timelines <- 
   lapply(ids, function(id) {
     # print(id)
-    path <- paths[sim_id == id, ]
+    path <- paths[individual_id == id, ]
     timeline <- assemble_timeline(list(data.table(timestamp = start), path),
                                   .step = "2 mins", 
                                   .trim = FALSE)
@@ -195,7 +196,7 @@ timelines <-
 names(timelines) <- ids
 # Examine timeline ranges
 timestats <-
-  data.table(sim_id = 1:100L, 
+  data.table(individual_id = 1:100L, 
              duration = sapply(timelines, 
                                \(x)  as.numeric(difftime(max(x), min(x), units = "weeks"))))
 utils.add::basic_stats(timestats$duration)
