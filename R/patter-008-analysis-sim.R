@@ -1,12 +1,19 @@
 ###########################
 ###########################
-#### patter-analyses.R
+#### patter-analysis-sim.R
 
 #### Aims
-# 1) Quick residency analysis
+# 1) Quick residency analysis for simulated data
 
 #### Prerequisites
 # 1) patter-algorithms.R
+
+#
+#
+# TO DO
+# Update script in line with revised directory structure
+#
+#
 
 
 ###########################
