@@ -108,7 +108,7 @@ recs_short <- recs %>%
   group_by(StationName,regions) %>% 
   reframe(deploy_lon = mean(deploy_long), deploy_lat = mean(deploy_lat))
 
-saveRDS(recs_short, "./data/moorings.rds")
+saveRDS(recs_short, "./data/simulated_moorings.rds")
 
 # convert to sp object
 recs_sf <- st_as_sf(x = recs_short, coords = c('deploy_lon', 'deploy_lat'), crs = 4326)

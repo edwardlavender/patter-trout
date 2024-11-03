@@ -6,7 +6,7 @@
 # 1) Sets up data for analysis with patter
 
 #### Prerequisites
-# 1) Create recs_short -> moorings.rds in model_occupancy_estimates.R
+# 1) Create recs_short -> simulated_moorings.rds in model_occupancy_estimates.R
 
 
 ###########################
@@ -23,61 +23,25 @@ Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(patter)
 library(tictoc)
 dv::src()
 
 #### Load data 
-champlain  <- terra::vect("data/ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp")
-moorings   <- readRDS("data/moorings.rds")
-detections <- readRDS("data/simulated_detections.rds")
-metadata   <- readRDS("data/simulations_metadata.rds")
-
-
-###########################
-###########################
-#### Study area (~2 s)
-
-#### Build map 
-# Use a coarse map for speed sampling initial locations 
-tic()
-epsg_utm         <- "EPSG:3175"
-champlain$land   <- as.numeric(1)
-regions <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "region", .res = 200, .plot = TRUE)
-maps    <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "land", .res = 200, .plot = TRUE)
-map     <- maps$SpatRaster
-map_len <- terra::ymax(map) - terra::ymin(map)
-toc()
-
-#### Examine map properties
-# Visualise map simplification
-terra::plot(map, col = "blue")
-terra::lines(champlain |> terra::project(epsg_utm))
-# Zoom-in to check resolution
-map_zoom <- terra::crop(map, 
-                        cbind(1787707, 977397.3) |>
-                          terra::vect() |>
-                          terra::buffer(width = 10000) |>
-                          terra::ext())
-terra::plot(map_zoom)
-terra::lines(champlain |> terra::project(epsg_utm))
-# Check ncell & compare to dat_gebco() for reference
-terra::ncell(map)
-terra::ncell(patter::dat_gebco())
-
-#### Validity map(s)
-# Validity maps for simulation analysis is computed in patter_02_exploration.R. 
-# Validity map for real-world analysis is computed here. 
-vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)
-terra::writeRaster(vmap, here_input("vmap.tif"), overwrite = TRUE)
+champlain  <- terra::vect(here_data("ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp"))
+map        <- terra::rast(here_input("map.tif"))
+moorings   <- readRDS(here_data("simulated_moorings.rds"))
+detections <- readRDS(here_data("simulated_detections.rds"))
+metadata   <- readRDS(here_data("simulations_metadata.rds"))
 
 
 ###########################
 ###########################
 #### Simulated paths (~40 s)
 
-file_paths <- "data/patter/input/paths.qs"
+start <- as.POSIXct("2022-01-01 00:00:00" , tz = "UTC")
+
+file_paths <- here_input_sim("paths.qs")
 if (!file.exists(file_paths)) {
   
   tic()
@@ -121,14 +85,14 @@ if (!file.exists(file_paths)) {
 
 ###########################
 ###########################
-#### Observations
+#### Simulated observations
 
 #### Define detection data (detections & receiver coordinates)
 # Define receiver coordinates (UTM)
 rxy <- 
   cbind(moorings$deploy_lon, moorings$deploy_lat) |> 
   terra::vect(crs = terra::crs(champlain)) |> 
-  terra::project(epsg_utm) |>
+  terra::project("EPSG:3175") |>
   terra::crds()
 points(rxy[, 1], rxy[, 2], col = "red")
 stopifnot(all(!is.na(terra::extract(map, rxy)$map_value)))
@@ -242,16 +206,11 @@ utils.add::basic_stats(timestats$duration)
 #### Save datasets
 
 #### Write datasets
-terra::writeRaster(map, here_input("map.tif"), overwrite = TRUE)
-terra::writeRaster(regions$SpatRaster, here_input("regions.tif"), overwrite = TRUE)
-qs::qsave(map_len, here_input("map_len.qs"))
-qs::qsave(timelines, here_input("timelines.qs"))
-qs::qsave(moorings, here_input("moorings.qs"))
-qs::qsave(detections, here_input("detections.qs"))
-qs::qsave(metadata, here_input("metadata.qs"))
-
-#### Check sizes 
-file.size(here_input("map.tif")) / 1e6 # MB
+qs::qsave(start, here_input_sim("start.qs"))
+qs::qsave(timelines, here_input_sim("timelines.qs"))
+qs::qsave(moorings, here_input_sim("moorings.qs"))
+qs::qsave(detections, here_input_sim("detections.qs"))
+qs::qsave(metadata, here_input_sim("metadata.qs"))
 
 
 #### End of code. 
