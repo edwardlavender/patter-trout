@@ -128,6 +128,7 @@ moorings[, receiver_beta := -0.005]
 moorings[, receiver_gamma := 6000]
 
 #### Movement model 
+
 # 0.1 m/s -> 12 m/2 min
 # 0.2 m/s -> 24 m/2 min
 # 0.3 m/s -> 36 m/2 min
