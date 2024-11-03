@@ -27,7 +27,7 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-champlain  <- terra::vect("data/ChamplainRegions.shp")
+champlain  <- terra::vect("data/ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp")
 moorings   <- readRDS("data/moorings.rds")
 detections <- readRDS("data/simulated_detections.rds")
 metadata   <- readRDS("data/simulations_metadata.rds")
@@ -41,12 +41,11 @@ metadata   <- readRDS("data/simulations_metadata.rds")
 # Use a coarse map for speed sampling initial locations 
 tic()
 epsg_utm         <- "EPSG:3175"
-champlain$region <- champlain$GNIS_NAME
 champlain$land   <- as.numeric(1)
 regions <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "region", .res = 250, .plot = TRUE)
+                         .field = "region", .res = 200, .plot = TRUE)
 maps    <- as_SpatRaster(champlain, .simplify = 0.001, .utm = epsg_utm,
-                         .field = "land", .res = 250, .plot = TRUE)
+                         .field = "land", .res = 200, .plot = TRUE)
 map     <- maps$SpatRaster
 map_len <- terra::ymax(map) - terra::ymin(map)
 toc()
@@ -65,10 +64,13 @@ terra::plot(map_zoom)
 terra::lines(champlain |> terra::project(epsg_utm))
 # Check ncell & compare to dat_gebco() for reference
 terra::ncell(map)
-terra::ncell(dat_gebco())
+terra::ncell(patter::dat_gebco())
 
-#### Validity map
-# TO DO
+#### Validity map(s)
+# Validity maps for simulation analysis is computed in patter_02_exploration.R. 
+# Validity map for real-world analysis is computed here. 
+vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)
+terra::writeRaster(vmap, here_input("vmap.tif"), overwrite = TRUE)
 
 
 ###########################
