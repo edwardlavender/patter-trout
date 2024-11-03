@@ -105,9 +105,11 @@ patter_workflow <- function(id,
   #### (2) Real-world model
   if (model_move_type == "real") {
     state      <- "StateXYD"
-    model_move <- move_xyd(mobility = 108, 
-                           dbn_length = glue("truncated(Gamma({3.0}, {1/0.15}), lower = 0.0, upper = {108})"), 
-                           dbn_angle_delta = glue("Normal({0.0}, {2.0})"))
+    # Trial max mobility: 1 m/s for 3 min
+    mobility   <- 180 
+    model_move <- move_xyd(mobility = mobility, 
+                           dbn_length = glue("truncated(Gamma({3.0}, {1/0.1}), lower = 0.0, upper = {mobility})"), 
+                           dbn_angle_delta = glue("Normal({0.0}, {0.4})"))
   }
   
   #### Visualise movement model
@@ -161,7 +163,7 @@ patter_workflow <- function(id,
   fwd            <- do.call(pf_filter, args, quote = TRUE)
   t2             <- Sys.time()
   if (trial) {
-    return(fwd)
+    return(NULL)
   }
   convergence_dt <- data.table(individual_id = id, 
                                direction    = "forward", 

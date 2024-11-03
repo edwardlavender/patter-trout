@@ -57,22 +57,25 @@ if (FALSE) {
   file.remove(old)
 }
 
+#### Testing
+# Pick individuals with shorter time series for testing
+sort(unique(detections$individual_id))
+ids <- as.integer(c(26790, 26793, 26795, 26804, 24320, 24390, 24346, 24377, 24326, 26785))
+
 #### Timing & parallelisation
 # TO DO
 
 #### Run workflow for each individual
 tic()
-ids <- sort(unique(detections$individual_id))
-ids <- ids[1]
+length(ids)
 # debug(patter_workflow)
 cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
                   moorings = moorings, detections = detections, 
                   model_move = "real", 
-                  n_particle = 2e5L,
+                  n_particle = 5e4L,
                   trial = TRUE,
                   here_output = here_output_real)
-  
 })
 toc()
 
