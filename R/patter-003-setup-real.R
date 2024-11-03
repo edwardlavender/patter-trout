@@ -86,6 +86,17 @@ detections <-
          receiver_sn) |> 
   as.data.table()
 
+# Order detections by duration
+# * This improves speed during algorithm testing 
+# * (NB: the code below works because duration is unique to each individual)
+detections <- 
+  detections |>
+  group_by(individual_id) |> 
+  mutate(duration = as.numeric(difftime(max(timestamp), min(timestamp), units = "days"))) |> 
+  arrange(duration, timestamp) |> 
+  mutate(-duration) |>
+  as.data.table()
+
 # Define receiver_id (~3 s)
 # * match using receiver_sn and the time stamps
 for (i in 1:nrow(moorings)) {
@@ -145,6 +156,7 @@ curve(dtrunc(x, "norm", a = 0, b = 108, 24, 20), from = 0, to = 108)
 # * Reduce rate to widen distribution
 curve(dtrunc(x, "gamma", a = 0, b = 108, 5, 0.25), from = 0, to = 108)
 curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108) # best-guess
+curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.1), from = 0, to = 108)
 
 # Log normal
 # * Reduce sdlog to broaden distribution
