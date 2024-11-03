@@ -211,19 +211,6 @@ if (requireNamespace("flapper", quietly = TRUE)) {
 }
 
 
-###########################
-###########################
-#### Save outputs
-
-parameters <- 
-  list(model_move = list(mobility = mobility, 
-                         step = list(shape = step_shape, scale = step_scale), 
-                         angle = list(mean = angle_mean, sd = angle_sd)), 
-       model_obs = list(receiver_gamma = receiver_gamma))
-
-qs::qsave(parameters, here_input_sim("parameters.qs"))
-
-
 #### End of code. 
 ###########################
 ###########################
