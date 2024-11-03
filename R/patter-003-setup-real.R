@@ -157,6 +157,10 @@ curve(dtrunc(x, "lnorm", a = 0, b = 108, 3, 1), from = 0, to = 108)
 # * Increase scale to widen distribution 
 curve(dtrunc(x, "cauchy", a = 0, b = 108, 20, 10), from = 0, to = 108)
 
+#### Validity map
+vmap <- patter:::spatVmap(.map = map, .mobility = 108, .plot = TRUE)
+terra::writeRaster(vmap, here_input_real("vmap.tif"), overwrite = TRUE)
+
 
 ###########################
 ###########################
