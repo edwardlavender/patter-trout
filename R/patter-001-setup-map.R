@@ -62,7 +62,11 @@ terra::ncell(patter::dat_gebco())  # 50160
 # Check map size
 terra::ncell(map) * 8 / 1e6        # 0.81 MB
 
-#### Map bbox
+#### Map dimensions
+# max dimension
+terra::ymax(map) - terra::ymin(map) # 175000 m
+terra::xmax(map) - terra::xmin(map) # 24600 m
+# bbox
 map_bbox <- patter:::map_bbox(map)
 stopifnot(nrow(map_bbox) == 4L)
 terra::plot(map)
