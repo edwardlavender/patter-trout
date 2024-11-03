@@ -20,6 +20,9 @@ dv::clear()
 
 #### Essential packages
 Sys.setenv("JULIA_SESSION" = FALSE)
+library(data.table)
+library(dtplyr)
+library(dplyr, warn.conflicts = FALSE)
 library(tictoc)
 dv::src()
 
@@ -27,6 +30,24 @@ dv::src()
 map       <- terra::rast(here_input("map.tif"))
 moorings   <- qs::qread(here_input_real("moorings.qs"))
 detections <- qs::qread(here_input_real("detections.qs"))
+
+
+###########################
+###########################
+#### Detections
+
+#### Examine timeline duration
+# Compute durations
+duration <- 
+  detections |> 
+  group_by(individual_id) |> 
+  summarise(duration = as.numeric(difftime(max(timestamp), min(timestamp), units = "days"))) |> 
+  arrange(duration) |> 
+  as.data.table()
+table(table(duration$duration))
+# Examine durations
+duration
+hist(duration$duration)
 
 
 ###########################
