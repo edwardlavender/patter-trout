@@ -7,81 +7,51 @@
 # * the map & vmap exist in the Julia session
 
 patter_workflow <- function(id, 
-                            map = NULL, map_len,
-                            timelines, paths, moorings, detections, metadata, 
-                            parameters, model_move_type = c("low", "medium", "high"),
-                            interactive = TRUE) {
+                            timelines = NULL, 
+                            moorings, detections, 
+                            model_move_type = c("sim-low", "sim-medium", "sim-high", "real")) {
   
-  # id          <- 2L
-  # interactive <- TRUE
-  model_move_type    <- match.arg(model_move_type)
+  # id            <- 1L
+  model_move_type <- match.arg(model_move_type)
 
   
   ###########################
   #### Prepare data
   
   #### Define individual datasets
+  # TO DO
+  # Rename sim_id -> individual_id for consistency 
   sim_id <- NULL
-  path   <- paths[sim_id == id, ]
   dets   <- detections[sim_id == id, ]
-  meta   <- metadata[sim_id == id, ]
-  stopifnot(nrow(meta) == 1L)
   
   #### Define timeline (individual-specific)
-  timeline <- timelines[[id]]
-  
-  #### (optional) Examine individual-specific data
-  if (!os_linux() && interactive) {
-    
-    # Examine simulated step lengths 
-    dist <- terra::distance(cbind(path$x, path$y), 
-                            lonlat = FALSE, sequential = TRUE)
-    max(dist)
-    hist(dist)
-    
-    # Examine turning angles
-    # * (optional) TO DO
+  # Use pre-prepared timeline for simulations
+  # Otherwise, assemble timeline 
+  if (!is.null(timelines)) {
+    timeline <- timelines[[id]]
+  } else {
+    timeline <- assemble_timeline(.datasets = list(dets), .step = "2 mins")
   }
   
   
   ###########################
   #### Define movement model 
 
-  #### Random walk
-  # This is a simple generalisable model
-  # But it is associated with convergence issues 
-  # state      <- "StateXY"
-  # sspec    <- "gamma"
-  mobility <- parameters$model_move$mobility
-  # sshape   <- parameters$model_move$step$shape
-  # sscale   <- parameters$model_move$step$scale
-  # amean    <- parameters$model_move$angle$mean
-  # asd      <- parameters$model_move$angle$sd
-  # model_move <- move_xy(mobility = mobility, 
-  #                       dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
-  #                       dbn_angle = glue("truncated(Normal(0, 1), lower = -pi, upper = pi)"))
-
-  #### Correlated random walk (generalised)
-  # A CRW has better convergence properties
-  # However, it is difficult to capture the step length distribution adequately across all individuals
-  # The turning angle distribution is acceptible:
-  # * This is inflated slightly to limit performance cost
-  # * Overly high concentration leads to slow algorithm runs
+  #### (1) Simulation models
+  # Step lengths:
+  # * It is difficult to capture step lengths adequately across all individuals
+  # * Three models (low, medium, high activity) are required
+  # Turning angle:
+  # * A RW is associated with convergence challenges
+  # * A CRW has better convergence properties
+  # * A generic model for turning angle is acceptable: 
+  # - This is inflated slightly to limit performance cost
+  # - Overly high concentration leads to slow algorithm runs
   # ... as many trials are required to avoid jumps onto land
-  # * But a sd of <= 0.3 appears to be required for convergence
-  # state      <- "StateXYD"
-  # sspec      <- "gamma"
-  # sshape     <- sshape
-  # sscale     <- 60
-  # amean      <- 0.0
-  # asd        <- 0.3
-  # state      <- "StateXYD"
-  # model_move <- move_xyd(mobility = mobility, 
-  #                        dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
-  #                        dbn_angle_delta = glue("Normal({amean}, {asd})"))
+  # - But an sd of <= 0.3 appears to be required for convergence
 
-  #### Correlated random walk (low activity)
-  # TO DO
+  #### (A) Simulation low-activity model
+  mobility <- 115
   if (model_move_type == "low") {
     state      <- "StateXYD"
     sspec      <- "gamma"
@@ -92,18 +62,12 @@ patter_workflow <- function(id,
     model_move <- move_xyd(mobility = mobility, 
                            dbn_length = glue("truncated(Normal({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
                            dbn_angle_delta = glue("Normal({amean}, {asd})"))
-    
-    
-    curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = sshape, scale = sscale), 
-          from = 0, to = mobility, n = 1e3L,
-          xlab = "Step length (m)", ylab = "Density")
-    abline(v = 12.7)
   }
   
-  #### Correlated random walk (medium activity)
+  #### (B) Simulation medium-activity model 
   if (model_move_type == "medium") {
     state      <- "StateXYD"
-    sspec       <- "norm"
+    sspec      <- "norm"
     sshape     <- 63.5
     sscale     <- 5
     amean      <- 0.0
@@ -113,7 +77,7 @@ patter_workflow <- function(id,
                            dbn_angle_delta = glue("Normal({amean}, {asd})"))
   }
 
-  #### Correlated random walk (high activity)
+  #### (C) Simulation high-activity model 
   if (model_move_type == "high") {
     state      <- "StateXYD"
     sspec      <- "gamma"
@@ -125,58 +89,22 @@ patter_workflow <- function(id,
                            dbn_length = glue("truncated(Gamma({sshape}, {sscale}), lower = 0.0, upper = {mobility})"), 
                            dbn_angle_delta = glue("Normal({amean}, {asd})"))
   }
-
-  #### Visualise movement model 
-  if (interactive) {
-    
-    # Visualise model components 
-    pp <- par(mfrow = c(1, 2))
-    if (sspec == "gamma") {
-      curve(dtrunc(x, spec = "gamma", a = 0, b = mobility, shape = sshape, scale = sscale), 
-            from = 0, to = mobility, n = 1e3L,
-            xlab = "Step length (m)", ylab = "Density")
-    } else if (sspec == "norm") {
-      curve(dtrunc(x, spec = "norm", a = 0, b = mobility, mean = sshape, sd = sscale), 
-            from = 0, to = mobility, n = 1e3L,
-            xlab = "Step length (m)", ylab = "Density")
-    }
-    abline(v = max(dist), col = "red")
-    curve(dnorm(x, 0, 0.25),
-          from = -pi - 0.1, to = pi + 0.1, n = 1e3L,
-          xlab = "Turning angle (rad)", ylab = "Density")
-    par(pp)
-    
-    # Visualise realisations of the movement model
-    length(timeline)
-    pos <- 1:50000
-    if (!os_linux() & !is.null(map)) {
-      sim_path_walk(.map = map, 
-                    .timeline = timeline[pos],
-                    .state = state, 
-                    .model_move = model_move, 
-                    .n_path = 6L, .one_page = TRUE)
-    }
-    
-    # Compare to simulated paths
-    if (!os_linux() & !is.null(map)) {
-      pp <- par(mfrow = c(2, 2))
-      lapply(1:4, function(id) {
-        path <- paths[sim_id == id, ]
-        path <- path[pos, ]
-        terra::plot(map)
-        patter:::add_sp_path(path$x, path$y)
-      })
-      par(pp)
-    }
-    
+  
+  #### (2) Real-world model
+  if (model_move_type == "real") {
+    model_move <- move_xyd(mobility = 108, 
+                           dbn_length = glue("truncated(Gamma({3.0}, {1/0.15}), lower = 0.0, upper = {108})"), 
+                           dbn_angle_delta = glue("Normal({0.0}, {1.0})"))
   }
+  
+  #### Visualise movement model
+  # See supporting code in dev/
   
   
   ###########################
   #### Define observation models
   
   #### Assemble acoustics (0, 1)
-  moorings[, receiver_gamma := parameters$model_obs$receiver_gamma]
   acoustics   <- assemble_acoustics(.timeline   = timeline, 
                                     .detections = dets, 
                                     .moorings   = moorings)
@@ -184,8 +112,7 @@ patter_workflow <- function(id,
   #### Assemble containers
   containers  <- assemble_acoustics_containers(.timeline  = timeline, 
                                                .acoustics = acoustics, 
-                                               .mobility  = mobility, 
-                                               .threshold = map_len)
+                                               .mobility  = mobility)
   
   #### Define yobs (forward & backward)
   yobs_fwd <- list(ModelObsAcousticLogisTrunc = copy(acoustics),
@@ -203,20 +130,18 @@ patter_workflow <- function(id,
   
   #### Define filter arguments 
   # Tune .n_move, .n_particle & .n_record for improved speed during filtering/smoothing
-  args <- list(.timeline = timeline, 
-               .state = state, 
-               .xinit = xinit_fwd, 
-               .yobs = yobs_fwd,
-               .model_move = model_move, 
-               .n_move = 10000L,
-               .n_particle = 2.5e4L,
-               .n_record = 500L,
-               .n_iter = 1L,
-               .direction = "forward")
+  args <- list(.timeline    = timeline, 
+               .state       = state, 
+               .xinit       = xinit_fwd, 
+               .yobs        = yobs_fwd,
+               .model_move  = model_move, 
+               .n_move      = 10000L,
+               .n_particle  = 2.5e4L,
+               .n_record    = 500L,
+               .n_iter      = 1L,
+               .direction   = "forward")
   
   #### Run forward filter 
-  # Setting initial observations is slow (~1 min)
-  # Set yobs to missing in `args` to speed up multiple runs 
   t1             <- Sys.time()
   set_seed()
   fwd            <- do.call(pf_filter, args, quote = TRUE)
