@@ -3,7 +3,7 @@
 #### patter-run-real.R
 
 #### Aims
-# 1) Run patter analyses
+# 1) Run particle algorithms for real-world datasets
 
 #### Prerequisites
 # 1) patter-setup.R
@@ -36,13 +36,8 @@ if (!os_linux()) {
   map <- terra::rast(here_input("map.tif"))
   terra::plot(map)
 }
-map_len     <- qs::qread(here_input("map_len.qs"))
-timelines   <- qs::qread(here_input("timelines.qs"))
-paths       <- qs::qread(here_input("paths.qs"))
-metadata    <- qs::qread(here_input("metadata.qs"))
 moorings    <- qs::qread(here_input("moorings.qs"))
 detections  <- qs::qread(here_input("detections.qs"))
-parameters  <- qs::qread(here_input("parameters.qs"))
 
 
 ###########################
@@ -54,7 +49,13 @@ julia_connect()
 julia_source("./Julia/src/model-move.jl")
 set_seed()
 set_map(here_input("map.tif"))
-set_vmap(.vmap = here_input("vmap.tif"))
+set_vmap(.vmap = here_input_real("vmap.tif"))
+
+#### Cleanup
+if (FALSE) {
+  old <- list.files(here_output_real(), pattern = "\\.qs$", recursive = TRUE, full.names = TRUE)
+  file.remove(old)
+}
 
 #### Testing
 test <- FALSE
@@ -64,29 +65,14 @@ if (test) {
 }
 
 #### Timing & parallelisation
-# Approximate timing for individual 1, forward filter on siam-linux20:
-# * 15 threads: ~28 s vs. 12 threads MacBook ~10 s
-# * 30 threads: ~25 s
-# * 64 threads: 28 s
-# * 120 threads: 53 s
-
-#### Cleanup
-if (FALSE) {
-  old <- list.files(here_output_sim(), pattern = "\\.qs$", recursive = TRUE, full.names = TRUE)
-  file.remove(old)
-}
+# TO DO
 
 #### Run workflow for each individual
-# To test convergence, use individuals 1 (12.7 m), 2 (63.5 m) and 7 (114 m)
-# Repeat for each movement model ("low", "medium", "high")
 tic()
 cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
-                  timelines = timelines, paths = paths, 
                   moorings = moorings, detections = detections, 
-                  metadata = metadata, 
-                  parameters = parameters, model_move = "low",
-                  interactive = FALSE)
+                  model_move = "real")
   
 })
 toc()

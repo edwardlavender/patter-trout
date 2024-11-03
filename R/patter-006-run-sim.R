@@ -3,7 +3,7 @@
 #### patter-run-sim.R
 
 #### Aims
-# 1) Run patter analyses
+# 1) Run patter analyses for simulated datasets
 
 #### Prerequisites
 # 1) patter-setup.R
@@ -37,10 +37,10 @@ if (!os_linux()) {
   terra::plot(map)
 }
 timelines   <- qs::qread(here_input_sim("timelines.qs"))
-# paths     <- qs::qread(here_input_sim("paths.qs"))
-# metadata  <- qs::qread(here_input_sim("metadata.qs"))
 moorings    <- qs::qread(here_input_sim("moorings.qs"))
 detections  <- qs::qread(here_input_sim("detections.qs"))
+# paths     <- qs::qread(here_input_sim("paths.qs"))
+# metadata  <- qs::qread(here_input_sim("metadata.qs"))
 
 
 ###########################
@@ -52,7 +52,13 @@ julia_connect()
 julia_source("./Julia/src/model-move.jl")
 set_seed()
 set_map(here_input("map.tif"))
-set_vmap(.vmap = here_input("vmap.tif"))
+set_vmap(.vmap = here_input_sim("vmap.tif"))
+
+#### Cleanup
+if (FALSE) {
+  old <- list.files(here_output_sim(), pattern = "\\.qs$", recursive = TRUE, full.names = TRUE)
+  file.remove(old)
+}
 
 #### Testing
 test <- FALSE
@@ -68,15 +74,9 @@ if (test) {
 # * 64 threads: 28 s
 # * 120 threads: 53 s
 
-#### Cleanup
-if (FALSE) {
-  old <- list.files(here_output_sim(), pattern = "\\.qs$", recursive = TRUE, full.names = TRUE)
-  file.remove(old)
-}
-
 #### Run workflow for each individual
 # To test convergence, use individuals 1 (12.7 m), 2 (63.5 m) and 7 (114 m)
-# Repeat for each movement model ("low", "medium", "high")
+# Repeat for each movement model ("sim-low", "sim-medium", "sim-high")
 tic()
 cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
