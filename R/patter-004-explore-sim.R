@@ -1,6 +1,6 @@
 ###########################
 ###########################
-#### patter-exploration
+#### patter-explore-sim.R
 
 #### Aims
 # 1) Examine simulated datasets for patter
@@ -33,17 +33,16 @@ dv::src()
 
 #### Load data 
 map         <- terra::rast(here_input("map.tif"))
-map_len     <- qs::qread(here_input("map_len.qs"))
-start       <- qs::qread(here_input("start.qs"))
-paths       <- qs::qread(here_input("paths.qs"))
-moorings    <- qs::qread(here_input("moorings.qs"))
-detections  <- qs::qread(here_input("detections.qs"))
-metadata    <- qs::qread(here_input("metadata.qs"))
+start       <- qs::qread(here_input_sim("start.qs"))
+paths       <- qs::qread(here_input_sim("paths.qs"))
+moorings    <- qs::qread(here_input_sim("moorings.qs"))
+detections  <- qs::qread(here_input_sim("detections.qs"))
+metadata    <- qs::qread(here_input_sim("metadata.qs"))
 
 
 ###########################
 ###########################
-#### Examine movements
+#### Examine simulated movements
 
 #### Movement simulation
 # Paths were simulated via glatos::crw_in_polygon() which calls glatos::crw()
@@ -62,7 +61,7 @@ metadata    <- qs::qread(here_input("metadata.qs"))
 # > Each step was 500 m
 # > During a step, velocity was set to different values
 # > Hence, steps lasted different durations (500 / velocity)
-outfile <- here_input("path-metrics.qs")
+outfile <- here_input_sim("paths-metrics.qs")
 if (!file.exists(outfile)) {
   
   # ~1.25 mins with 12 cl
@@ -89,7 +88,7 @@ if (!file.exists(outfile)) {
     
   }) |> rbindlist()
   
-  qs::qsave(path_metrics, outfile)
+  qs::qsave(paths_metrics, outfile)
   
 } else {
   paths_metrics <- qs::qread(outfile)
@@ -109,7 +108,7 @@ steps <- paths_metrics$step[!is.na(paths_metrics$step)]
 max(steps)
 # 114.355 
 # Estimate approximately suitable model across all individuals
-spar <- run(file = here_input("step-fitdistr.qs"), 
+spar <- run(file = here_input_sim("step-fitdistr.qs"), 
             expr = {
               # ~2 mins
               MASS::fitdistr(steps, "gamma")
@@ -132,7 +131,7 @@ curve(dgamma(x, shape = step_shape, scale = step_scale),
 
 #### Compute validity map from mobility
 vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)
-terra::writeRaster(vmap, here_input("vmap.tif"), overwrite = TRUE)
+terra::writeRaster(vmap, here_input_sim("vmap.tif"), overwrite = TRUE)
 
 #### Examine turning angles
 # This is a quick way of generating an approximately suitable model across all individuals
@@ -148,7 +147,7 @@ curve(dnorm(x, mean = angle_mean, sd = angle_sd),
       lwd = 3, add = TRUE)
 
 #### Movement model dimensions
-png(here_fig("model-move.png"), height = 5, width = 10, units = "in", res = 600)
+png(here_fig_sim("model-move.png"), height = 5, width = 10, units = "in", res = 600)
 pp <- par(mfrow = c(1, 2))
 # Step lengths
 hist(steps, prob = TRUE, 
@@ -222,7 +221,7 @@ parameters <-
                          angle = list(mean = angle_mean, sd = angle_sd)), 
        model_obs = list(receiver_gamma = receiver_gamma))
 
-qs::qsave(parameters, here_input("parameters.qs"))
+qs::qsave(parameters, here_input_sim("parameters.qs"))
 
 
 #### End of code. 
