@@ -1,6 +1,6 @@
 ###########################
 ###########################
-#### patter-analyses
+#### patter-run-sim.R
 
 #### Aims
 # 1) Run patter analyses
