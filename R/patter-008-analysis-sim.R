@@ -12,6 +12,8 @@
 #
 # TO DO
 # Update script in line with revised directory structure
+# Rename sim_id -> individual_id
+# Handle inputs from different models etc.
 #
 #
 
@@ -47,13 +49,6 @@ op <- options(terra.pal = rev(terrain.colors(256L)))
 ###########################
 ###########################
 #### Algorithm properties
-
-#
-#
-# TO DO
-# Handle outputs from different models
-#
-#
 
 #### Define runs
 runs <- c("forward", "backward", "smoothing")

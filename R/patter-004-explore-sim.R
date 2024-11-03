@@ -65,16 +65,16 @@ outfile <- here_input_sim("paths-metrics.qs")
 if (!file.exists(outfile)) {
   
   # ~1.25 mins with 12 cl
-  paths_metrics <- cl_lapply(unique(paths$sim_id), .cl = 12L, .fun = function(id) {
+  paths_metrics <- cl_lapply(unique(paths$individual_id), .cl = 12L, .fun = function(id) {
     
     path_metrics <- 
       paths |> 
       lazy_dt() |> 
-      filter(sim_id == id) |> 
-      select(sim_id, date = timestamp, x, y) |> 
+      filter(individual_id == id) |> 
+      select(individual_id, date = timestamp, x, y) |> 
       as.data.frame() |> 
-      bayesmove::prep_data(coord.names = c("x", "y"), id = "sim_id") |> 
-      select(sim_id, timestamp = date, x, y, step, angle, dt) |> 
+      bayesmove::prep_data(coord.names = c("x", "y"), id = "individual_id") |> 
+      select(individual_id, timestamp = date, x, y, step, angle, dt) |> 
       as.data.table()
     
     if (FALSE) {
@@ -100,9 +100,9 @@ if (!file.exists(outfile)) {
 # * id 2: 63.5
 # * id 7: 114
 paths_metrics |> 
-  group_by(sim_id) |> 
+  group_by(individual_id) |> 
   summarise(step = max(step, na.rm = TRUE)) |> 
-  arrange(as.integer(sim_id))
+  arrange(as.integer(individual_id))
 # Estimate mobility 
 steps <- paths_metrics$step[!is.na(paths_metrics$step)]
 max(steps)
@@ -171,9 +171,9 @@ dev.off()
 # > Compute the detection distances (ddists) between individuals & receivers at moment of detection
 
 ddists <- 
-  cl_lapply(split(paths, paths$sim_id), function(path) {
+  cl_lapply(split(paths, paths$individual_id), function(path) {
   
-  # path <- split(paths, paths$sim_id)[[1]]
+  # path <- split(paths, paths$individual_id)[[1]]
     
   # Combine detections with receiver coordinates 
   ddist <- merge(detections, moorings, by = "receiver_id")
@@ -199,11 +199,11 @@ receiver_gamma <- 3240
 # What can we learn about movements from the observations? 
 # Is there a case to increase information in the prior? 
 if (requireNamespace("flapper", quietly = TRUE)) {
-  detections[, fct := sim_id]
+  detections[, fct := individual_id]
   msp <- sp::SpatialPoints(moorings[, c("receiver_x", "receiver_y")], sp::CRS(terra::crs(map)))
   msp <- sp::SpatialPointsDataFrame(msp, data.frame(receiver_id = moorings$receiver_id))
   mvt <- flapper::get_mvt_mobility_from_acoustics(data = detections, 
-                                                  fct = "sim_id", 
+                                                  fct = "individual_id", 
                                                   moorings = msp, 
                                                   detection_range = receiver_gamma, 
                                                   step = 120,

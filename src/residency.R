@@ -1,13 +1,13 @@
 if (Sys.getenv("JULIA_SESSION") == "FALSE") {
   
   #' Quick overall residency estimation
-  # * id:    sim_id
+  # * id:    individual_id
   # * map:   raster with regions defined
   # * paths: data.table of simulated paths
   
   qresidency <- function(id, map, paths) {
     
-    path <- paths[sim_id == id, ]
+    path <- paths[individual_id == id, ]
     smo  <- here_output("particles", glue("smo-{id}.qs"))
     if (!file.exists(smo)) {
       return(NULL)
@@ -24,8 +24,8 @@ if (Sys.getenv("JULIA_SESSION") == "FALSE") {
       ungroup() |>
       mutate(perc = (n / sum(n)) * 100, 
              estimate = "path", 
-             sim_id = id) |> 
-      select("sim_id", "region", "estimate", count = "n", "perc") |>
+             individual_id = id) |> 
+      select("individual_id", "region", "estimate", count = "n", "perc") |>
       as.data.table()
     
     #### Particle residency estimates
@@ -37,8 +37,8 @@ if (Sys.getenv("JULIA_SESSION") == "FALSE") {
       ungroup() |>
       mutate(perc = (n / sum(n)) * 100, 
              estimate = "smoother", 
-             sim_id = id) |> 
-      select("sim_id", "region", "estimate", count = "n", "perc") |>
+             individual_id = id) |> 
+      select("individual_id", "region", "estimate", count = "n", "perc") |>
       as.data.table()
     
     #### Collect data

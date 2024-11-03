@@ -6,6 +6,9 @@
 # * Julia is connected
 # * the map & vmap exist in the Julia session
 
+# TO DO 
+# Change input to data.table that includes output directories
+
 patter_workflow <- function(id, 
                             timelines = NULL, 
                             moorings, detections, 
@@ -19,10 +22,7 @@ patter_workflow <- function(id,
   #### Prepare data
   
   #### Define individual datasets
-  # TO DO
-  # Rename sim_id -> individual_id for consistency 
-  sim_id <- NULL
-  dets   <- detections[sim_id == id, ]
+  dets   <- detections[individual_id == id, ]
   
   #### Define timeline (individual-specific)
   # Use pre-prepared timeline for simulations
@@ -146,14 +146,14 @@ patter_workflow <- function(id,
   set_seed()
   fwd            <- do.call(pf_filter, args, quote = TRUE)
   t2             <- Sys.time()
-  convergence_dt <- data.table(sim_id      = id, 
-                               direction   = "forward", 
-                               model_move  = model_move_type,
-                               np          = args$.n_particle, 
-                               nt          = length(timeline),
-                               time        = as.numeric(difftime(t2, t1, units = "mins")),
-                               convergence = fwd$convergence, 
-                               trials      = fwd$trials)
+  convergence_dt <- data.table(individual_id = id, 
+                               direction    = "forward", 
+                               model_move   = model_move_type,
+                               np           = args$.n_particle, 
+                               nt           = length(timeline),
+                               time         = as.numeric(difftime(t2, t1, units = "mins")),
+                               convergence  = fwd$convergence, 
+                               trials       = fwd$trials)
   qs::qsave(convergence_dt, 
             here_output_sim("convergence", model_move_type, glue("convergence-fwd-{id}.qs")))
   if (!fwd$convergence) {
@@ -170,7 +170,7 @@ patter_workflow <- function(id,
   set_seed()
   bwd             <- do.call(pf_filter, args, quote = TRUE)
   t2              <- Sys.time()
-  convergence_dt  <- data.table(sim_id      = id, 
+  convergence_dt  <- data.table(individual_id      = id, 
                                 direction   = "backward", 
                                 model_move  = model_move_type,
                                 np          = args$.n_particle, 
@@ -191,14 +191,14 @@ patter_workflow <- function(id,
   set_seed()
   smo  <- pf_smoother_two_filter()
   t2   <- Sys.time()
-  convergence_dt  <- data.table(sim_id      = id, 
-                                model_move  = model_move_type,
-                                direction   = "smoothing", 
-                                np          = args$.n_particle, 
-                                nt          = length(timeline),
-                                time        = as.numeric(difftime(t2, t1, units = "mins")),
-                                convergence = NA_integer_, 
-                                trials      = NA_integer_)
+  convergence_dt  <- data.table(individual_id = id, 
+                                model_move    = model_move_type,
+                                direction     = "smoothing", 
+                                np            = args$.n_particle, 
+                                nt            = length(timeline),
+                                time          = as.numeric(difftime(t2, t1, units = "mins")),
+                                convergence   = NA_integer_, 
+                                trials        = NA_integer_)
   qs::qsave(convergence_dt, 
             here_output_sim("convergence", model_move_type, glue("convergence-smo-{id}.qs")))
   qs::qsave(smo, here_output_sim("particles", model_move_type, glue("smo-{id}.qs")))
