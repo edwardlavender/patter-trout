@@ -36,13 +36,11 @@ if (!os_linux()) {
   map <- terra::rast(here_input("map.tif"))
   terra::plot(map)
 }
-map_len     <- qs::qread(here_input("map_len.qs"))
-timelines   <- qs::qread(here_input("timelines.qs"))
-paths       <- qs::qread(here_input("paths.qs"))
-metadata    <- qs::qread(here_input("metadata.qs"))
-moorings    <- qs::qread(here_input("moorings.qs"))
-detections  <- qs::qread(here_input("detections.qs"))
-parameters  <- qs::qread(here_input("parameters.qs"))
+timelines   <- qs::qread(here_input_sim("timelines.qs"))
+# paths     <- qs::qread(here_input_sim("paths.qs"))
+# metadata  <- qs::qread(here_input_sim("metadata.qs"))
+moorings    <- qs::qread(here_input_sim("moorings.qs"))
+detections  <- qs::qread(here_input_sim("detections.qs"))
 
 
 ###########################
@@ -82,12 +80,9 @@ if (FALSE) {
 tic()
 cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
-                  map = NULL, map_len = map_len, 
-                  timelines = timelines, paths = paths, 
+                  timelines = timelines,
                   moorings = moorings, detections = detections, 
-                  metadata = metadata, 
-                  parameters = parameters, model_move = "low",
-                  interactive = FALSE)
+                  model_move = "sim-low")
   
 })
 toc()
