@@ -1,6 +1,6 @@
 ###########################
 ###########################
-#### patter-setup.R
+#### patter-setup-sim.R
 
 #### Aims
 # 1) Sets up data for analysis with patter
