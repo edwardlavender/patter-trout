@@ -36,8 +36,8 @@ if (!os_linux()) {
   map <- terra::rast(here_input("map.tif"))
   terra::plot(map)
 }
-moorings    <- qs::qread(here_input("moorings.qs"))
-detections  <- qs::qread(here_input("detections.qs"))
+moorings    <- qs::qread(here_input_real("moorings.qs"))
+detections  <- qs::qread(here_input_real("detections.qs"))
 
 
 ###########################
@@ -57,22 +57,21 @@ if (FALSE) {
   file.remove(old)
 }
 
-#### Testing
-test <- FALSE
-if (test) {
-  # For testing, use a short timeline
-  timelines <- lapply(timelines, function(timeline) timeline[1:1000])
-}
-
 #### Timing & parallelisation
 # TO DO
 
 #### Run workflow for each individual
 tic()
-cl_lapply(c(1L, 2L, 7L), function(id) {
+ids <- sort(unique(detections$individual_id))
+ids <- ids[1]
+# debug(patter_workflow)
+cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
                   moorings = moorings, detections = detections, 
-                  model_move = "real")
+                  model_move = "real", 
+                  n_particle = 2e5L,
+                  trial = TRUE,
+                  here_output = here_output_real)
   
 })
 toc()
