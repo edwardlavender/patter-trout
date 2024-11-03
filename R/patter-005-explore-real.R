@@ -49,6 +49,35 @@ table(table(duration$duration))
 duration
 hist(duration$duration)
 
+#### Examine memory requirements
+# Compute pf_particles object size for largest detection time series
+# > Build example states and diagnostics data.tables
+# > Check sizes
+tic()
+np <- 500L
+nt <- ceiling(60/2 * 24 * 1027.806516)  # number of time steps
+nr <- nt * np                           # number of rows: 370,010,346
+states <- data.table(path_id = rep(1L:np, each = nt),
+                     timestep = rep(1L:nt, np), 
+                     timestamp = rep(seq.POSIXt(as.POSIXct("2016-01-01"), by = "2 mins", length.out = nt), np), 
+                     map_value = runif(nr), 
+                     x = runif(nr), 
+                     y = runif(nr), 
+                     angle = runif(nr))
+diagnostics <- data.table(timestep = 1L:nt,
+                          timestamp = seq.POSIXt(as.POSIXct("2016-01-01"), by = "2 mins", length.out = nt), 
+                          ess = runif(nt), 
+                          maxlp = runif(nt))
+fwd <- list(states = states, diagnostics = diagnostics, convergence = TRUE, trials = 1L)
+pryr::object_size(states)      # 16.28 GB
+pryr::object_size(diagnostics) # 17.76 MB
+pryr::object_size(fwd)         # 16.30 GB
+toc()
+# Results
+# > A single output from the filter may be ~16 GB (x 2: in R and Julia)
+# > We also require outputs from the backward filter and the smoother
+# > For the longer time series, batching is required
+
 
 ###########################
 ###########################
