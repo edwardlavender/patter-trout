@@ -62,9 +62,16 @@ terra::ncell(patter::dat_gebco())  # 50160
 # Check map size
 terra::ncell(map) * 8 / 1e6        # 0.81 MB
 
+#### Map bbox
+map_bbox <- patter:::map_bbox(map)
+stopifnot(nrow(map_bbox) == 4L)
+terra::plot(map)
+points(map_bbox, pch = 21, bg = "red", cex = 5)
+
 #### Write maps
 terra::writeRaster(map, here_input("map.tif"), overwrite = TRUE)
 terra::writeRaster(regions$SpatRaster, here_input("regions.tif"), overwrite = TRUE)
+qs::qsave(map_bbox, here_input("map-bbox.qs"))
 file.size(here_input("map.tif")) / 1e6 # MB
 
 
