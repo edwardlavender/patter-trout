@@ -125,10 +125,18 @@ patter_workflow <- function(id,
                                     .moorings   = moorings)
   
   #### Assemble containers
+  map_bbox    <- NULL
+  threshold   <- NULL
+  if (!os_linux()) {
+    map_bbox <- qs::qread(here_input("map-bbox.qs"))
+  } else {
+    threshold <- 175000
+  }
   containers  <- assemble_acoustics_containers(.timeline  = timeline, 
                                                .acoustics = acoustics, 
                                                .mobility  = mobility, 
-                                               .map       = qs::qread(here_input("map-bbox.qs")))
+                                               .map       = map_bbox, 
+                                               .threshold = threshold)
   
   #### Define yobs (forward & backward)
   yobs_fwd <- list(ModelObsAcousticLogisTrunc = copy(acoustics),
