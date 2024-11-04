@@ -174,10 +174,24 @@ curve(plogis(1.8 + -0.005 * x), from = 0, to = 6000, ylim = c(0, 1))
 curve(plogis(3 + -0.0025 * x), from = 0, to = 6000, col = "blue", add = TRUE)
 # Compromise model
 curve(plogis(2.5 + -0.003 * x), from = 0, to = 6000, col = "darkgreen", add = TRUE)
+# ggplot representation
+alpha          <- 2.5    # intercept
+beta           <- -0.003 # rate of decline (larger values, nearer 0, increase steepness)
+receiver_gamma <- 7000
+ggplot(data.frame(x = c(0, receiver_gamma)), aes(x = x)) +
+  stat_function(fun = function(x) {
+    prob <- plogis(alpha + beta * x)
+    prob[x > receiver_gamma] <- 0
+    prob
+  }) +
+  ylim(0, 1) + 
+  scale_x_continuous(breaks = seq(0, receiver_gamma, by = 500))  + 
+  theme_bw()
+
 # Update moorings
 moorings[, receiver_alpha := 2.5]
 moorings[, receiver_beta := -0.003]
-moorings[, receiver_gamma := 9000]
+moorings[, receiver_gamma := 7000]
 
 #### Movement model 
 
@@ -200,7 +214,8 @@ curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108)
 
 # Gamma (ggplot2)
 ggplot(data.frame(x = c(0, 180)), aes(x = x)) +
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, rate = 0.1)) +
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, scale = 1/0.1)) +
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, scale = 1/0.05), colour = "red") + # more flexible
   scale_x_continuous(breaks = seq(0, 180, by = 10))  + theme_bw()
 
 # Log normal
