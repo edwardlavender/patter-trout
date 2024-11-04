@@ -38,7 +38,7 @@ if (!os_linux()) {
 }
 moorings    <- qs::qread(here_input_real("moorings.qs"))
 detections  <- qs::qread(here_input_real("detections.qs"))
-
+cthresholds <- qs::qread(here_input_real("cthresholds.qs"))
 
 ###########################
 ###########################
@@ -71,8 +71,8 @@ log.txt <- sink_open(here_output_real("log"))
 tic()
 out <- cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
-                  moorings = moorings, detections = detections, 
-                  model_move = "real", 
+                  moorings = moorings, detections = detections, cthresholds = cthresholds,
+                  model_move_type = "real", 
                   n_particle = 1e4L,
                   trial = TRUE,
                   here_output = here_output_real)

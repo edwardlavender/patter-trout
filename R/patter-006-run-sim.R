@@ -39,6 +39,7 @@ if (!os_linux()) {
 timelines   <- qs::qread(here_input_sim("timelines.qs"))
 moorings    <- qs::qread(here_input_sim("moorings.qs"))
 detections  <- qs::qread(here_input_sim("detections.qs"))
+cthresholds <- qs::qread(here_input_sim("cthresholds.qs"))
 # paths     <- qs::qread(here_input_sim("paths.qs"))
 # metadata  <- qs::qread(here_input_sim("metadata.qs"))
 
@@ -81,8 +82,8 @@ tic()
 cl_lapply(c(1L, 2L, 7L), function(id) {
   patter_workflow(id = id, 
                   timelines = timelines,
-                  moorings = moorings, detections = detections, 
-                  model_move = "sim-low", 
+                  moorings = moorings, detections = detections, cthresholds = cthresholds,
+                  model_move_type = "sim-low", 
                   n_particle = 2.5e4L,
                   here_output = here_output_sim)
   
