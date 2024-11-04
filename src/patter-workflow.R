@@ -15,7 +15,7 @@ patter_workflow <- function(id,
                             here_output) {
   
   #### Print progress
-  cat("\n\n")
+  cat("\n\n\n\n")
   print(paste0(rep("-", 50), collapse = ""))
   print(Sys.time())
   print(id)
@@ -139,14 +139,16 @@ patter_workflow <- function(id,
   # Filter containers by pre-computed cthresholds
   # * Precomputed thresholds are used as `.map` is not currently supported on linux
   # * (when JULIA_SESSION = "TRUE")
-  containers <- 
-    containers |>
-    lazy_dt(immutable = FALSE) |>
-    left_join(cthresholds, by = "receiver_id") |> 
-    filter(radius <= distance) |> 
-    mutate(distance = NULL) |> 
-    as.data.table()
-  
+  for (direction in c("forward", "backward")) {
+    containers[[direction]] <- 
+      containers[[direction]] |>
+      lazy_dt(immutable = FALSE) |>
+      left_join(cthresholds, by = c("sensor_id" = "receiver_id")) |> 
+      filter(radius <= distance) |> 
+      mutate(distance = NULL) |> 
+      as.data.table()
+  }
+
   #### Define yobs (forward & backward)
   yobs_fwd <- list(ModelObsAcousticLogisTrunc = copy(acoustics),
                    ModelObsAcousticContainer  = copy(containers$forward))
