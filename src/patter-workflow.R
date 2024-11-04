@@ -18,6 +18,7 @@ patter_workflow <- function(id,
   cat("\n\n\n\n")
   print(paste0(rep("-", 50), collapse = ""))
   print(Sys.time())
+  print(paste(which(unique(detections$individual_id) == id), "/", length(unique(detections$individual_id))))
   print(id)
   cat("\n")
   
@@ -116,7 +117,7 @@ patter_workflow <- function(id,
     mobility   <- 180 
     model_move <- move_xyd(mobility = mobility, 
                            dbn_length = glue("truncated(Gamma({3.0}, {1/0.1}), lower = 0.0, upper = {mobility})"), 
-                           dbn_angle_delta = glue("Normal({0.0}, {0.4})"))
+                           dbn_angle_delta = glue("Normal({0.0}, {0.3})"))
   }
   
   #### Visualise movement model
