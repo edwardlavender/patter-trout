@@ -27,9 +27,9 @@ library(tictoc)
 dv::src()
 
 #### Load data 
-map       <- terra::rast(here_input("map.tif"))
-moorings   <- qs::qread(here_input_real("moorings.qs"))
-detections <- qs::qread(here_input_real("detections.qs"))
+map         <- terra::rast(here_input("map.tif"))
+moorings    <- qs::qread(here_input_real("moorings.qs"))
+detections  <- qs::qread(here_input_real("detections.qs"))
 
 
 ###########################
