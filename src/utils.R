@@ -73,5 +73,5 @@ sink_close <- function(log.txt = NULL) {
     sink()
     sink(type = "message")
   }
-  nothing()
+  invisible(NULL)
 }
