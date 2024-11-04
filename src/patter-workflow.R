@@ -14,7 +14,14 @@ patter_workflow <- function(id,
                             trial = FALSE,
                             here_output) {
   
-  #### Set up 
+  #### Print progress
+  cat("\n\n")
+  print(paste0(rep("-", 50), collapse = ""))
+  print(Sys.time())
+  print(id)
+  cat("\n")
+  
+  #### Function set up
   # id            <- 1L
   model_move_type <- match.arg(model_move_type)
   
@@ -154,16 +161,17 @@ patter_workflow <- function(id,
   
   #### Define filter arguments 
   # Tune .n_move, .n_particle & .n_record for improved speed during filtering/smoothing
-  args <- list(.timeline    = timeline, 
-               .state       = state, 
-               .xinit       = xinit_fwd, 
-               .yobs        = yobs_fwd,
-               .model_move  = model_move, 
-               .n_move      = 10000L,
-               .n_particle  = n_particle,
-               .n_record    = 500L,
-               .n_iter      = 1L,
-               .direction   = "forward")
+  n_record <- ifelse(trial, 1L, 1000L)
+  args     <- list(.timeline    = timeline, 
+                   .state       = state, 
+                   .xinit       = xinit_fwd, 
+                   .yobs        = yobs_fwd,
+                   .model_move  = model_move, 
+                   .n_move      = 10000L,
+                   .n_particle  = n_particle,
+                   .n_record    = n_record,
+                   .n_iter      = 1L,
+                   .direction   = "forward")
   
   #### Run forward filter 
   t1             <- Sys.time()
