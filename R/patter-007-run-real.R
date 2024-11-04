@@ -8,6 +8,9 @@
 #### Prerequisites
 # 1) patter-setup.R
 
+#### TO DO
+# Implement batching for big datasets (see setup-real.R)
+
 
 ###########################
 ###########################
@@ -39,6 +42,7 @@ if (!os_linux()) {
 moorings    <- qs::qread(here_input_real("moorings.qs"))
 detections  <- qs::qread(here_input_real("detections.qs"))
 cthresholds <- qs::qread(here_input_real("cthresholds.qs"))
+
 
 ###########################
 ###########################
