@@ -31,6 +31,7 @@ dv::src()
 #### Load data 
 champlain  <- terra::vect(here_data("ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp"))
 map        <- terra::rast(here_input("map.tif"))
+map_bbox   <- qs::qread(here_input("map-bbox.qs"))
 moorings   <- readRDS(here_data("OriginalReceiverSummary_2013-2017.rds"))
 detections <- readRDS(here_data("lkt_detections_2013-2017.rds"))
 
@@ -130,6 +131,39 @@ detections <-
 
 ###########################
 ###########################
+#### Compute container thresholds 
+
+#### Method
+# In assemble_acoustics_containers(), the .map argument 
+# ... isn't supported on linux if JULIA_SESSION = "TRUE".
+# Here, we prepare a data.table and use it to filter the output
+# ... from assemble_acoustics_containers() on the fly. 
+
+#### Compute max. dist. btwn receivers and study area edges
+# Compute maximum distances
+dist <- terra::distance(cbind(moorings$receiver_x, moorings$receiver_y), map_bbox, lonlat = FALSE)
+dist <- apply(dist, 1, max)
+# Compute container thresholds
+cthresholds <- data.table(receiver_id = moorings$receiver_id, 
+                          distance = dist)
+
+
+###########################
+###########################
+#### Batch datasets
+
+# TO DO
+# Batch the detection datasets to manage memory (see also explore-real.R)
+# Split at the moment of a detection, roughly into maximum chunk lengths of X days
+# The detection should be duplicated (last time step, first time step)
+# Then we can treat the time series as if they are from different individuals
+# Add 'a', 'b', 'c', ..., to individual names
+# Modify output folders (?)
+# Otherwise, a complex loop is required
+
+
+###########################
+###########################
 #### Prepare parameters
 
 #### Detection probability model
@@ -180,6 +214,7 @@ terra::writeRaster(vmap, here_input_real("vmap.tif"), overwrite = TRUE)
 
 qs::qsave(moorings, here_input_real("moorings.qs"))
 qs::qsave(detections, here_input_real("detections.qs"))
+qs::qsave(cthresholds, here_input_real("cthresholds.qs"))
 
 
 #### End of code. 

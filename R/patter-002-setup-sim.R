@@ -30,6 +30,7 @@ dv::src()
 #### Load data 
 champlain  <- terra::vect(here_data("ChamplainRegionsGrouped/ChamplainRegionsGrouped.shp"))
 map        <- terra::rast(here_input("map.tif"))
+map_bbox   <- qs::qread(here_input("map-bbox.qs"))
 moorings   <- readRDS(here_data("simulated_moorings.rds"))
 detections <- readRDS(here_data("simulated_detections.rds"))
 metadata   <- readRDS(here_data("simulations_metadata.rds"))
@@ -94,8 +95,8 @@ rxy <-
   terra::vect(crs = terra::crs(champlain)) |> 
   terra::project("EPSG:3175") |>
   terra::crds()
-points(rxy[, 1], rxy[, 2], col = "red")
-stopifnot(all(!is.na(terra::extract(map, rxy)$map_value)))
+# points(rxy[, 1], rxy[, 2], col = "red")
+# stopifnot(all(!is.na(terra::extract(map, rxy)$map_value)))
 
 #### Define moorings data.table
 range(detections$detection_timestamp_utc)
@@ -148,6 +149,14 @@ moorings <-
 
 #### Checks
 stopifnot(all(!is.na(detections$receiver_id)))
+
+#### Compute container thresholds
+# See explanation in setup-real.R
+dist <- terra::distance(cbind(moorings$receiver_x, moorings$receiver_y), map_bbox, lonlat = FALSE)
+dist <- apply(dist, 1, max)
+cthresholds <- data.table(receiver_id = moorings$receiver_id, 
+                          distance = dist)
+
 
 ###########################
 ###########################
@@ -211,6 +220,7 @@ qs::qsave(start, here_input_sim("start.qs"))
 qs::qsave(timelines, here_input_sim("timelines.qs"))
 qs::qsave(moorings, here_input_sim("moorings.qs"))
 qs::qsave(detections, here_input_sim("detections.qs"))
+qs::qsave(cthresholds, here_input_sim("cthresholds.qs"))
 qs::qsave(metadata, here_input_sim("metadata.qs"))
 
 
