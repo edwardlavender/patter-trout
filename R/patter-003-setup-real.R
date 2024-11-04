@@ -23,6 +23,7 @@ Sys.setenv("JULIA_SESSION" = FALSE)
 library(data.table)
 library(dtplyr)
 library(dplyr, warn.conflicts = FALSE)
+library(ggplot2)
 library(lubridate)
 library(truncdist)
 library(tictoc)
@@ -167,18 +168,24 @@ cthresholds <- data.table(receiver_id = moorings$receiver_id,
 #### Prepare parameters
 
 #### Detection probability model
+# Best-guess summer model 
 curve(plogis(1.8 + -0.005 * x), from = 0, to = 6000, ylim = c(0, 1))
-moorings[, receiver_alpha := 1.8]
-moorings[, receiver_beta := -0.005]
-moorings[, receiver_gamma := 6000]
+# Best-guess winter model
+curve(plogis(3 + -0.0025 * x), from = 0, to = 6000, col = "blue", add = TRUE)
+# Compromise model
+curve(plogis(2.5 + -0.003 * x), from = 0, to = 6000, col = "darkgreen", add = TRUE)
+# Update moorings
+moorings[, receiver_alpha := 2.5]
+moorings[, receiver_beta := -0.003]
+moorings[, receiver_gamma := 9000]
 
 #### Movement model 
 
-# 0.1 m/s -> 12 m/2 min
-# 0.2 m/s -> 24 m/2 min
-# 0.3 m/s -> 36 m/2 min
-# 0.4 m/s -> 48 m/2 min
-# 0.9 m/ms -> 108 m/2 min
+# 0.1 m/s -> 12 m/2 min,    18 m/3 min
+# 0.2 m/s -> 24 m/2 min,    36 m/3 min
+# 0.3 m/s -> 36 m/2 min,    54 m/3 min
+# 0.4 m/s -> 48 m/2 min,    72 m/3 min
+# 0.9 m/ms -> 108 m/2 min,  180 m/3 min
 
 # Normal 
 # * This distribution probably permits overly low step lengths 
@@ -189,8 +196,12 @@ curve(dtrunc(x, "norm", a = 0, b = 108, 24, 20), from = 0, to = 108)
 # * Reduce shape to shift to left (scale-dependent)
 # * Reduce rate to widen distribution
 curve(dtrunc(x, "gamma", a = 0, b = 108, 5, 0.25), from = 0, to = 108)
-curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108) # best-guess
-curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.1), from = 0, to = 108)
+curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108)
+
+# Gamma (ggplot2)
+ggplot(data.frame(x = c(0, 180)), aes(x = x)) +
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, rate = 0.1)) +
+  scale_x_continuous(breaks = seq(0, 180, by = 10))  + theme_bw()
 
 # Log normal
 # * Reduce sdlog to broaden distribution
