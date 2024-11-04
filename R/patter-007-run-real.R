@@ -71,7 +71,8 @@ ids <- unique(detections$individual_id)
 
 #### Run workflow for each individual
 length(ids)
-log.txt <- sink_open(here_output_real("log"))
+log.txt <- sink_open(NULL)
+# log.txt <- sink_open(here_output_real("log"))
 tic()
 out <- cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
