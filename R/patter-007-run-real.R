@@ -66,18 +66,19 @@ ids <- unique(detections$individual_id)
 # TO DO
 
 #### Run workflow for each individual
-tic()
 length(ids)
-# debug(patter_workflow)
+log.txt <- sink_open(here_output_real("log"))
+tic()
 out <- cl_lapply(ids, function(id) {
   patter_workflow(id = id, 
                   moorings = moorings, detections = detections, 
                   model_move = "real", 
-                  n_particle = 5e4L,
+                  n_particle = 1e4L,
                   trial = TRUE,
                   here_output = here_output_real)
 })
 toc()
+sink_close(log.txt)
 
 
 #### End of code. 
