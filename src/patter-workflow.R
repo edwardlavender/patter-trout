@@ -8,7 +8,7 @@
 
 patter_workflow <- function(id, 
                             timelines = NULL, 
-                            moorings, detections, 
+                            moorings, detections, cthresholds,
                             model_move_type = c("sim-low", "sim-medium", "sim-high", "real"),
                             n_particle = 1000L,
                             trial = FALSE,
@@ -132,18 +132,20 @@ patter_workflow <- function(id,
                                     .moorings   = moorings)
   
   #### Assemble containers
-  map_bbox    <- NULL
-  threshold   <- NULL
-  if (!os_linux()) {
-    map_bbox <- qs::qread(here_input("map-bbox.qs"))
-  } else {
-    threshold <- 175000
-  }
   containers  <- assemble_acoustics_containers(.timeline  = timeline, 
                                                .acoustics = acoustics, 
                                                .mobility  = mobility, 
-                                               .map       = map_bbox, 
-                                               .threshold = threshold)
+                                               .threshold = 175000)
+  # Filter containers by pre-computed cthresholds
+  # * Precomputed thresholds are used as `.map` is not currently supported on linux
+  # * (when JULIA_SESSION = "TRUE")
+  containers <- 
+    containers |>
+    lazy_dt(immutable = FALSE) |>
+    left_join(cthresholds, by = "receiver_id") |> 
+    filter(radius <= distance) |> 
+    mutate(distance = NULL) |> 
+    as.data.table()
   
   #### Define yobs (forward & backward)
   yobs_fwd <- list(ModelObsAcousticLogisTrunc = copy(acoustics),
