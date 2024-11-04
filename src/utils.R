@@ -49,6 +49,7 @@ os_linux <- function() {
 #' sink_*() wrappers
 
 sink_open <- function(log.folder = NULL) {
+  log.txt <- NULL
   if (!is.null(log.folder)) {
     # Define file name
     log.txt <- paste0("log-", as.numeric(Sys.time()), ".txt")
