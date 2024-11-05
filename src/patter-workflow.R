@@ -113,7 +113,7 @@ patter_workflow <- function(id,
   #### (2) Real-world model
   if (model_move_type == "real") {
     state      <- "StateXYD"
-    # Trial max mobility: 1 m/s for 3 min
+    # Trial max mobility: 1.1 m/s for 3 min
     mobility   <- 200 
     model_move <- move_xyd(mobility = mobility, 
                            dbn_length = glue("truncated(Gamma({3.0}, {1/0.05}), lower = 0.0, upper = {mobility})"), 
