@@ -242,7 +242,13 @@ detections_units <-
   select(individual_id, unit_id) |> 
   group_by(unit_id) |> 
   slice(1L) |> 
+  ungroup() |> 
+  group_by(individual_id) |>
+  mutate(n_batch = n()) |> 
+  ungroup() |>
+  arrange(individual_id, unit_id) |>
   as.data.table()
+# View(detections_units)
 
 #### Set individual_id = unit_id (backwards compatibility)
 # We implement the algorithms for each 'individual'
