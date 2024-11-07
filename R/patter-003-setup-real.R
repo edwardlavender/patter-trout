@@ -153,14 +153,72 @@ cthresholds <- data.table(receiver_id = moorings$receiver_id,
 ###########################
 #### Batch datasets
 
-# TO DO
+#### Method
 # Batch the detection datasets to manage memory (see also explore-real.R)
-# Split at the moment of a detection, roughly into maximum chunk lengths of X days
-# The detection should be duplicated (last time step, first time step)
+# Split at the moment of a detection, roughly into one-month batches 
+# Join batches detections (last time step, first time step)
 # Then we can treat the time series as if they are from different individuals
-# Add 'a', 'b', 'c', ..., to individual names
-# Modify output folders (?)
-# Otherwise, a complex loop is required
+
+#### Define individuals/months
+detections <- 
+  detections |> 
+  group_by(individual_id) |> 
+  mutate(unit_id = as.character(cut(timestamp, "months"))) |> 
+  select(individual_id, unit_id, timestamp, receiver_id) |>
+  as.data.table()
+
+#### Update detections 
+detections <- 
+  lapply(split(detections, detections$individual_id), function(d_id) {
+  # d_id <- split(detections, detections$individual_id)[[1]]
+  d_batch <- split(d_id, d_id$unit_id)
+  n_batch <- length(d_batch)
+  # Join batches
+  # * The next batch should begin with the last observation from the previous batch
+  # * This means we always start/stop filter @ a detection
+  # * (i.e., in a 'happy' place) 
+  if (n_batch > 1L) {
+    for (i in 1:(n_batch - 1)) {
+      last_row <- d_batch[[i]][.N, ]
+      d_batch[[i + 1]] <- rbind(last_row, d_batch[[i + 1]])
+    }
+  }
+  # Update batch ID
+  for (i in 1:n_batch) {
+    d_batch[[i]][, unit_id := paste0(individual_id, "_", unit_id[.N])]
+  }
+  # Rejoin batches
+  rbindlist(d_batch)
+}) |> rbindlist()
+
+#### Checks
+det_1 <- detections[individual_id == 24320, ]
+det_1 <- split(det_1, det_1$unit_id)
+length(det_1)
+(det_1a <- det_1[[1]][.N, ])
+(det_1b <- det_1[[2]][1, ])
+stopifnot(all.equal(det_1a$individual_id, det_1b$individual_id))
+stopifnot(all.equal(det_1a$timestamp, det_1b$timestamp))
+stopifnot(all.equal(det_1a$receiver_id, det_1b$receiver_id))
+
+#### Record mapping between individual_id and unit_id
+detections_units <- 
+  detections |> 
+  select(individual_id, unit_id) |> 
+  group_by(unit_id) |> 
+  slice(1L) |> 
+  as.data.table()
+
+#### Set individual_id = unit_id (backwards compatibility)
+# We implement the algorithms for each 'individual'
+# To compute residency:
+# - We iterate over individuals in detections_units
+# - For each individual, we read the data for each batch
+# - We process (shrink) the data for that batch
+# - For batchs 2:N, we drop the first row to avoid douple counting 
+# - see analysis-real.R (TO DO)
+detections[, individual_id := unit_id]
+detections[, unit_id := NULL]
 
 
 ###########################
@@ -240,6 +298,7 @@ terra::writeRaster(vmap, here_input_real("vmap.tif"), overwrite = TRUE)
 
 qs::qsave(moorings, here_input_real("moorings.qs"))
 qs::qsave(detections, here_input_real("detections.qs"))
+qs::qsave(detections_units, here_input_real("detections-units.qs"))
 qs::qsave(cthresholds, here_input_real("cthresholds.qs"))
 
 
