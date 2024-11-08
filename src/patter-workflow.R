@@ -116,7 +116,7 @@ patter_workflow <- function(id,
     # Trial max mobility: 1.1 m/s for 3 min
     mobility   <- 200 
     model_move <- move_xyd(mobility = mobility, 
-                           dbn_length = glue("truncated(Gamma({2.8}, {1/0.05}), lower = 0.0, upper = {mobility})"), 
+                           dbn_length = glue("truncated(Gamma({2.33}, {27.0}), lower = 0.0, upper = {mobility})"), 
                            dbn_angle_delta = glue("Normal({0.0}, {0.3})"))
   }
   

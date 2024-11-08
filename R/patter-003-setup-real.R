@@ -99,12 +99,14 @@ detections <-
   mutate(-duration) |>
   as.data.table()
 
-# Define receiver_id (~3 s)
+# Define receiver_id (~4 s)
 # * match using receiver_sn and the time stamps
+tic()
 for (i in 1:nrow(moorings)) {
   detections[receiver_sn == moorings$receiver_sn[i] & 
                timestamp %within% moorings$receiver_int[i], receiver_id := moorings$receiver_id[i]]
 }
+toc()
 table(is.na(detections$receiver_id))
 
 # Drop 'extra' detections
@@ -264,16 +266,18 @@ detections[, unit_id := NULL]
 
 ###########################
 ###########################
-#### Prepare parameters
+#### Prepare detection parameters
 
-#### Detection probability model
-# Best-guess summer model 
+#### Best-guess summer model 
 curve(plogis(1.8 + -0.005 * x), from = 0, to = 6000, ylim = c(0, 1))
-# Best-guess winter model
+
+#### Best-guess winter model
 curve(plogis(3 + -0.0025 * x), from = 0, to = 6000, col = "blue", add = TRUE)
-# Compromise model
+
+#### Compromise model
 curve(plogis(2.5 + -0.003 * x), from = 0, to = 6000, col = "darkgreen", add = TRUE)
-# ggplot representation
+
+#### ggplot representation
 alpha          <- 2.5    # intercept
 beta           <- -0.003 # rate of decline (larger values, nearer 0, increase steepness)
 receiver_gamma <- 7000
@@ -287,50 +291,68 @@ ggplot(data.frame(x = c(0, receiver_gamma)), aes(x = x)) +
   scale_x_continuous(breaks = seq(0, receiver_gamma, by = 500))  + 
   theme_bw()
 
-# Update moorings
+#### Update moorings
 moorings[, receiver_alpha := 2.25]
 moorings[, receiver_beta := -0.0022]
 moorings[, receiver_gamma := 7000]
 
-#### Movement model 
 
+###########################
+###########################
+#### Prepare movement parameters
+
+#### Speeds
 # 0.1 m/s -> 12 m/2 min,    18 m/3 min
 # 0.2 m/s -> 24 m/2 min,    36 m/3 min
 # 0.3 m/s -> 36 m/2 min,    54 m/3 min
 # 0.4 m/s -> 48 m/2 min,    72 m/3 min
 # 0.9 m/ms -> 108 m/2 min,  180 m/3 min
 
-# Normal 
-# * This distribution probably permits overly low step lengths 
-# * But otherwise covers a broad range of possible cruising speeds
-curve(dtrunc(x, "norm", a = 0, b = 108, 24, 20), from = 0, to = 108)
+#### Define mobility 
+mobility <- 200
 
-# Gamma
-# * Reduce shape to shift to left (scale-dependent)
-# * Reduce rate to widen distribution
-curve(dtrunc(x, "gamma", a = 0, b = 108, 5, 0.25), from = 0, to = 108)
-curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108)
+#### Normal 
+# This distribution probably permits overly low step lengths 
+# But otherwise covers a broad range of possible cruising speeds
+curve(dtrunc(x, "norm", a = 0, b = mobility, 24, 20), from = 0, to = mobility)
 
-# Gamma (ggplot2)
-ggplot(data.frame(x = c(0, 180)), aes(x = x)) +
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 4.5, scale = 1/0.1)) +
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 2.8, scale = 1/0.05), colour = "red") + # more flexible
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3.2, scale = 1/0.06), colour = "blue") 
-  scale_x_continuous(breaks = seq(0, 180, by = 10))  + theme_bw()
+#### Gamma
+# Reduce shape to shift to left (scale-dependent)
+# Reduce rate to widen distribution
+curve(dtrunc(x, "gamma", a = 0, b = mobility, 5, 0.25), from = 0, to = mobility)
+curve(dtrunc(x, "gamma", a = 0, b = mobility, 3, 0.15), from = 0, to = mobility)
 
-# Log normal
-# * Reduce sdlog to broaden distribution
-# * This parameterisation peaks too early
-curve(dtrunc(x, "lnorm", a = 0, b = 108, 3, 1), from = 0, to = 108)
+#### Gamma (ggplot2)
+# Define example parameters
+p1 <- c(2.8, 1 / 0.05)
+# Shrink/expand distribution e.g., by 120 % while maintaining the same mode 
+p2 <- gamma_rescale(p1[1], p1[2], fact = 1.2)
+p3 <- gamma_rescale(p1[1], p1[2], fact = 0.8)
+# Visualise Gamma distributions
+ggplot(data.frame(x = c(0, mobility)), aes(x = x)) +
+  # stat_dtruncgamma(mobility, shape = 4.5, scale = 1/0.1) + 
+  # stat_dtruncgamma(mobility, shape = 3.2, scale = 1/0.06, col = "blue") + 
+  stat_dtruncgamma(mobility, shape = 4.5, scale = 1/0.10, 
+                   col = "grey", linetype = 2, linewidth = 1.5) + 
+  stat_dtruncgamma(mobility, shape = p1[1], scale = p1[2], col = "black") + 
+  stat_dtruncgamma(mobility, shape = p2[1], scale = p2[2], col = "green") + 
+  stat_dtruncgamma(mobility, shape = p3[1], scale = p3[2], col = "red") + 
+  scale_x_continuous(breaks = seq(0, mobility, by = 10))  + 
+  theme_bw()
 
-# Cauchy
-# * This distribution also permits overly low step lengths
-# * But has a longer tail to the right
-# * Increase scale to widen distribution 
-curve(dtrunc(x, "cauchy", a = 0, b = 108, 20, 10), from = 0, to = 108)
+#### Log normal
+# Reduce sdlog to broaden distribution
+# This parameterisation peaks too early
+curve(dtrunc(x, "lnorm", a = 0, b = mobility, 3, 1), from = 0, to = mobility)
+
+#### Cauchy
+# This distribution also permits overly low step lengths
+# But has a longer tail to the right
+# Increase scale to widen distribution 
+curve(dtrunc(x, "cauchy", a = 0, b = mobility, 20, 10), from = 0, to = mobility)
 
 #### Validity map
-vmap <- patter:::spatVmap(.map = map, .mobility = 108, .plot = TRUE)
+vmap <- patter:::spatVmap(.map = map, .mobility = mobility, .plot = TRUE)
 terra::writeRaster(vmap, here_input_real("vmap.tif"), overwrite = TRUE)
 
 
