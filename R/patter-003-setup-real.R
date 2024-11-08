@@ -288,8 +288,8 @@ ggplot(data.frame(x = c(0, receiver_gamma)), aes(x = x)) +
   theme_bw()
 
 # Update moorings
-moorings[, receiver_alpha := 2.5]
-moorings[, receiver_beta := -0.003]
+moorings[, receiver_alpha := 2.25]
+moorings[, receiver_beta := -0.0022]
 moorings[, receiver_gamma := 7000]
 
 #### Movement model 
@@ -313,8 +313,9 @@ curve(dtrunc(x, "gamma", a = 0, b = 108, 3, 0.15), from = 0, to = 108)
 
 # Gamma (ggplot2)
 ggplot(data.frame(x = c(0, 180)), aes(x = x)) +
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, scale = 1/0.1)) +
-  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3, scale = 1/0.05), colour = "red") + # more flexible
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 4.5, scale = 1/0.1)) +
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 2.8, scale = 1/0.05), colour = "red") + # more flexible
+  stat_function(fun = function(x) dtrunc(x, "gamma", a = 0, b = 180, shape = 3.2, scale = 1/0.06), colour = "blue") 
   scale_x_continuous(breaks = seq(0, 180, by = 10))  + theme_bw()
 
 # Log normal
